@@ -7,13 +7,14 @@ import { getWeekSchedule } from '../../services/pplScheduler';
 
 interface WeekCalendarStripProps {
   pplStartDate: string;
+  workoutDays?: number[];
 }
 
-export function WeekCalendarStrip({ pplStartDate }: WeekCalendarStripProps) {
+export function WeekCalendarStrip({ pplStartDate, workoutDays }: WeekCalendarStripProps) {
   const weekDates = useMemo(() => getWeekDates(), []);
   const schedule = useMemo(
-    () => getWeekSchedule(pplStartDate, weekDates),
-    [pplStartDate, weekDates],
+    () => getWeekSchedule(pplStartDate, weekDates, workoutDays),
+    [pplStartDate, weekDates, workoutDays],
   );
 
   const todayStr = toISODate(new Date());
@@ -37,6 +38,7 @@ export function WeekCalendarStrip({ pplStartDate }: WeekCalendarStripProps) {
         const dateStr = toISODate(date);
         const isToday = dateStr === todayStr;
         const isDone = completedDates.has(dateStr);
+        const isRest = type === 'rest';
         const color = PPL_COLORS[type];
 
         return (
@@ -51,18 +53,26 @@ export function WeekCalendarStrip({ pplStartDate }: WeekCalendarStripProps) {
             </span>
             <span
               className={`text-xs font-bold ${
-                isToday ? 'text-text-primary' : 'text-text-secondary'
+                isRest
+                  ? 'text-text-muted'
+                  : isToday
+                    ? 'text-text-primary'
+                    : 'text-text-secondary'
               }`}
             >
               {date.getDate()}
             </span>
-            <div
-              className="w-2 h-2 rounded-full"
-              style={{
-                backgroundColor: isDone ? color : `${color}40`,
-                boxShadow: isDone ? `0 0 6px ${color}80` : 'none',
-              }}
-            />
+            {isRest ? (
+              <div className="w-2 h-0.5 rounded-full bg-border" />
+            ) : (
+              <div
+                className="w-2 h-2 rounded-full"
+                style={{
+                  backgroundColor: isDone ? color : `${color}40`,
+                  boxShadow: isDone ? `0 0 6px ${color}80` : 'none',
+                }}
+              />
+            )}
           </div>
         );
       })}

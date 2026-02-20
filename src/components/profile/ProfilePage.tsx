@@ -1,16 +1,66 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Header } from '../layout/Header';
 import { Card } from '../ui/Card';
 import { Input } from '../ui/Input';
+import { Spinner } from '../ui/Spinner';
+import { toast } from '../ui/Toast';
 import { useUserProfile } from '../../hooks/useUserProfile';
 import { saveUserProfile } from '../../hooks/useUserProfile';
 import { EQUIPMENT_OPTIONS, EXPERIENCE_LEVELS } from '../../utils/constants';
+import {
+  isWithingsConnected,
+  startWithingsAuth,
+  handleWithingsCallback,
+  syncWithingsData,
+  disconnectWithings,
+} from '../../services/withings';
 
 export function ProfilePage() {
   const profile = useUserProfile();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [editing, setEditing] = useState(false);
   const [editData, setEditData] = useState<Record<string, unknown>>({});
+  const [syncing, setSyncing] = useState(false);
+  const [callbackHandled, setCallbackHandled] = useState(false);
+
+  // Handle Withings OAuth callback params
+  useEffect(() => {
+    if (callbackHandled) return;
+    if (!searchParams.has('withings')) return;
+
+    setCallbackHandled(true);
+
+    (async () => {
+      const status = searchParams.get('withings');
+      if (status === 'success') {
+        const ok = await handleWithingsCallback(searchParams);
+        if (ok) {
+          toast('Withings connected successfully!', 'success');
+          // Auto-sync after connecting
+          setSyncing(true);
+          try {
+            const result = await syncWithingsData();
+            if (result.synced) {
+              toast(`Synced ${result.weightCount} weight + ${result.activityCount} activity records`);
+            }
+          } catch {
+            // Sync failure is non-critical
+          } finally {
+            setSyncing(false);
+          }
+        } else {
+          toast('Failed to save Withings tokens', 'error');
+        }
+      } else if (status === 'error') {
+        const msg = searchParams.get('msg') || 'Connection failed';
+        toast(`Withings error: ${msg}`, 'error');
+      }
+
+      // Clear URL params
+      setSearchParams({}, { replace: true });
+    })();
+  }, [searchParams, callbackHandled, setSearchParams]);
 
   if (!profile) {
     return (
@@ -44,6 +94,29 @@ export function ProfilePage() {
         ? current.filter((e: string) => e !== eq)
         : [...current, eq],
     });
+  };
+
+  const withingsConnected = isWithingsConnected(profile);
+
+  const handleSync = async () => {
+    setSyncing(true);
+    try {
+      const result = await syncWithingsData();
+      if (result.synced) {
+        toast(`Synced ${result.weightCount} weight + ${result.activityCount} activity records`, 'success');
+      } else {
+        toast('No Withings connection found', 'error');
+      }
+    } catch {
+      toast('Sync failed', 'error');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const handleDisconnect = async () => {
+    await disconnectWithings();
+    toast('Withings disconnected');
   };
 
   return (
@@ -159,6 +232,59 @@ export function ProfilePage() {
           )}
         </Card>
 
+        {/* Withings Integration */}
+        <Card>
+          <h3 className="text-sm font-semibold text-text-secondary mb-3">
+            Withings
+          </h3>
+          {withingsConnected ? (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-green-500" />
+                <span className="text-sm text-text-primary">Connected</span>
+                {profile.withingsUserId && (
+                  <span className="text-xs text-text-muted ml-auto">
+                    ID: {profile.withingsUserId}
+                  </span>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleSync}
+                  disabled={syncing}
+                  className="flex-1 py-2.5 rounded-lg text-xs font-medium bg-accent text-white disabled:opacity-50"
+                >
+                  {syncing ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <Spinner size={14} /> Syncing...
+                    </span>
+                  ) : (
+                    'Sync Now'
+                  )}
+                </button>
+                <button
+                  onClick={handleDisconnect}
+                  className="py-2.5 px-4 rounded-lg text-xs font-medium bg-bg-elevated text-red-400 border border-red-400/30"
+                >
+                  Disconnect
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-xs text-text-muted">
+                Connect your Withings account to auto-sync weight, steps, heart rate, and sleep data.
+              </p>
+              <button
+                onClick={startWithingsAuth}
+                className="w-full py-2.5 rounded-lg text-xs font-medium bg-accent text-white"
+              >
+                Connect Withings
+              </button>
+            </div>
+          )}
+        </Card>
+
         {/* Links */}
         <Card padding={false}>
           <Link
@@ -175,7 +301,7 @@ export function ProfilePage() {
         {/* App Info */}
         <div className="text-center pt-4">
           <p className="text-xs text-text-muted">
-            ShuktiFit v0.1.0 · Phase 3
+            ShuktiFit v0.6.0 · Phase 6
           </p>
         </div>
       </div>

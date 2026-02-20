@@ -13,6 +13,11 @@ export interface UserProfile {
   goalWeight?: number;
   goalBodyFat?: number;
   pplStartDate: string;
+  workoutDays?: number[]; // 0=Mon, 1=Tue, 2=Wed, 3=Thu, 4=Fri, 5=Sat, 6=Sun
+  withingsAccessToken?: string;
+  withingsRefreshToken?: string;
+  withingsTokenExpiry?: string;
+  withingsUserId?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -66,6 +71,7 @@ export interface Workout {
   totalVolume?: number;
   aiGenerated: boolean;
   aiReasoning?: string;
+  templateId?: number;
   createdAt: string;
 }
 
@@ -114,6 +120,9 @@ export interface BodyMeasurement {
   id?: number;
   date: string;
   weight?: number;
+  bodyFatPercent?: number;
+  muscleMass?: number;
+  boneMass?: number;
   neck?: number;
   shoulders?: number;
   chest?: number;
@@ -146,7 +155,7 @@ export interface BodyAnalysis {
 
 export interface WithingsData {
   id?: number;
-  type: 'weight' | 'steps' | 'heartRate' | 'sleep';
+  type: 'weight' | 'fatRatio' | 'fatMass' | 'muscleMass' | 'boneMass' | 'steps' | 'heartRate' | 'sleepScore' | 'sleepHours';
   date: string;
   value: number;
   unit: string;
@@ -180,4 +189,93 @@ export interface DailyTodo {
   completed: boolean;
   completedAt?: string;
   order: number;
+}
+
+// --- Workout Templates ---
+
+export type WorkoutType = 'push' | 'pull' | 'legs' | 'full-body';
+export type TemplateDuration = 20 | 30 | 45;
+export type EquipmentProfile = 'full' | 'bodyweight';
+
+export interface WorkoutTemplate {
+  id?: number;
+  name: string;
+  description?: string;
+  type: WorkoutType;
+  duration: TemplateDuration;
+  equipmentProfile: EquipmentProfile;
+  tags: string[];
+  isUserCreated: boolean;
+  sourceWorkoutId?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TemplateExercise {
+  id?: number;
+  templateId: number;
+  exerciseId: string;
+  exerciseName: string;
+  order: number;
+  targetSets: number;
+  targetReps: number;
+  suggestedWeight: number;
+  restSeconds: number;
+  supersetGroup: number | null;
+  notes?: string;
+}
+
+// --- Custom Data Series ---
+
+export type AggregationMethod = 'sum' | 'average' | 'last' | 'max';
+export type TrackerMode = 'standard' | 'checkin' | 'quickadd';
+
+export interface QuickAddPreset {
+  label: string;
+  value: number;
+}
+
+export interface CustomDataSeries {
+  id?: number;
+  title: string;
+  unit: string;
+  color: string;
+  aggregation: AggregationMethod;
+  isArchived: boolean;
+  createdAt: string;
+  // Dashboard tracker fields
+  trackerMode: TrackerMode;
+  showOnDashboard: boolean;
+  dashboardOrder: number;
+  quickAddPresets?: QuickAddPreset[];
+  checkinPrompt?: string;
+  dailyGoal?: number;
+  isSystemPreset?: boolean;
+}
+
+export interface CustomDataPoint {
+  id?: number;
+  seriesId: number;
+  date: string;
+  value: number;
+  timestamp: string;
+  notes?: string;
+}
+
+// --- AI Chat ---
+
+export interface ChatConversation {
+  id?: number;
+  title?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ChatMessage {
+  id?: number;
+  conversationId: number;
+  role: 'user' | 'assistant';
+  content: string;
+  contextSummary?: string;
+  createdAt: string;
 }

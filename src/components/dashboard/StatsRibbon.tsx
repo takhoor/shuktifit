@@ -1,13 +1,14 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db';
 import { Card } from '../ui/Card';
+import { toISODate } from '../../utils/dateUtils';
 
 export function StatsRibbon() {
   const stats = useLiveQuery(async () => {
     const now = new Date();
     const weekAgo = new Date(now);
     weekAgo.setDate(weekAgo.getDate() - 7);
-    const weekStr = weekAgo.toISOString().split('T')[0];
+    const weekStr = toISODate(weekAgo);
 
     const thisWeekWorkouts = await db.workouts
       .where('date')

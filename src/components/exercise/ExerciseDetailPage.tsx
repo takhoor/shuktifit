@@ -4,6 +4,7 @@ import { Spinner } from '../ui/Spinner';
 import { Card } from '../ui/Card';
 import { useExercise } from '../../hooks/useExercises';
 import { getExerciseImageUrl } from '../../utils/imageUrl';
+import { ExerciseHistoryChart } from '../progress/ExerciseHistoryChart';
 import { useState } from 'react';
 
 export function ExerciseDetailPage() {
@@ -103,6 +104,11 @@ export function ExerciseDetailPage() {
             </>
           )}
         </Card>
+
+        {/* Performance History */}
+        <div className="mb-4">
+          <ExerciseHistoryChart exerciseId={exercise.id} />
+        </div>
 
         {/* Instructions */}
         {exercise.instructions.length > 0 && (

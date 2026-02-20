@@ -10,6 +10,7 @@ import {
   FITNESS_GOALS,
 } from '../../utils/constants';
 import { today } from '../../utils/dateUtils';
+import { DayPicker } from '../ui/DayPicker';
 
 interface OnboardingData {
   name: string;
@@ -21,10 +22,22 @@ interface OnboardingData {
   experienceLevel: 'beginner' | 'intermediate' | 'advanced';
   equipment: string[];
   trainingFrequency: string;
+  workoutDays: number[];
   injuries: string;
 }
 
-const STEPS = ['Welcome', 'Basics', 'Goals', 'Equipment', 'Ready'] as const;
+const STEPS = ['Welcome', 'Basics', 'Goals', 'Schedule', 'Equipment', 'Ready'] as const;
+
+/** Pre-select workout days based on training frequency */
+function defaultDaysForFrequency(freq: number): number[] {
+  switch (freq) {
+    case 3: return [0, 2, 4]; // Mon, Wed, Fri
+    case 4: return [0, 1, 3, 4]; // Mon, Tue, Thu, Fri
+    case 5: return [0, 1, 2, 3, 4]; // Mon-Fri
+    case 6: return [0, 1, 2, 3, 4, 5]; // Mon-Sat
+    default: return [0, 1, 2, 3, 4]; // Mon-Fri
+  }
+}
 
 export function OnboardingFlow() {
   const navigate = useNavigate();
@@ -39,6 +52,7 @@ export function OnboardingFlow() {
     experienceLevel: 'intermediate',
     equipment: ['body only', 'dumbbell'],
     trainingFrequency: '5',
+    workoutDays: [0, 1, 2, 3, 4],
     injuries: '',
   });
 
@@ -59,6 +73,9 @@ export function OnboardingFlow() {
       trainingFrequency: parseInt(data.trainingFrequency) || 5,
       injuries: data.injuries,
       pplStartDate: today(),
+      workoutDays: data.workoutDays.length > 0 && data.workoutDays.length < 7
+        ? data.workoutDays
+        : undefined,
     });
     navigate('/');
   };
@@ -230,7 +247,7 @@ export function OnboardingFlow() {
                   <button
                     key={f}
                     onClick={() =>
-                      setData({ ...data, trainingFrequency: f })
+                      setData({ ...data, trainingFrequency: f, workoutDays: defaultDaysForFrequency(parseInt(f)) })
                     }
                     className={`flex-1 py-2.5 rounded-xl text-sm font-medium ${
                       data.trainingFrequency === f
@@ -253,6 +270,29 @@ export function OnboardingFlow() {
         )}
 
         {step === 3 && (
+          <div className="py-6 space-y-5">
+            <h2 className="text-xl font-bold text-text-primary">
+              Training Days
+            </h2>
+            <p className="text-sm text-text-secondary">
+              Which days of the week will you train? Your Push/Pull/Legs cycle
+              will advance only on these days.
+            </p>
+            <DayPicker
+              selectedDays={data.workoutDays}
+              onChange={(days) => setData({ ...data, workoutDays: days })}
+            />
+            <p className="text-xs text-text-muted">
+              {data.workoutDays.length === 0
+                ? 'Select at least one day'
+                : data.workoutDays.length === 7
+                  ? 'Training every day — no rest days'
+                  : `${data.workoutDays.length} days/week · ${7 - data.workoutDays.length} rest days`}
+            </p>
+          </div>
+        )}
+
+        {step === 4 && (
           <div className="py-6 space-y-5">
             <h2 className="text-xl font-bold text-text-primary">
               Available Equipment
@@ -278,7 +318,7 @@ export function OnboardingFlow() {
           </div>
         )}
 
-        {step === 4 && (
+        {step === 5 && (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <span className="text-6xl mb-6">🚀</span>
             <h2 className="text-2xl font-bold text-text-primary mb-3">
@@ -319,7 +359,7 @@ export function OnboardingFlow() {
           <Button
             className="flex-1"
             onClick={next}
-            disabled={step === 1 && !data.name}
+            disabled={(step === 1 && !data.name) || (step === 3 && data.workoutDays.length === 0)}
           >
             {step === 0 ? "Let's Go" : 'Next'}
           </Button>

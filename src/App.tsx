@@ -3,6 +3,7 @@ import { AppShell } from './components/layout/AppShell'
 import { DashboardPage } from './components/dashboard/DashboardPage'
 import { WorkoutListPage } from './components/workout/WorkoutListPage'
 import { WorkoutBuilderPage } from './components/workout/WorkoutBuilderPage'
+import { TemplateBrowserPage } from './components/workout/TemplateBrowserPage'
 import { WorkoutDetailPage } from './components/workout/WorkoutDetailPage'
 import { WorkoutPlayerPage } from './components/workout/WorkoutPlayerPage'
 import { ProgressPage } from './components/progress/ProgressPage'
@@ -40,6 +41,7 @@ function AppRoutes() {
       <Route element={<AppShell />}>
         <Route path="/" element={<DashboardPage />} />
         <Route path="/workouts" element={<WorkoutListPage />} />
+        <Route path="/workouts/templates" element={<TemplateBrowserPage />} />
         <Route path="/workouts/new" element={<WorkoutBuilderPage />} />
         <Route path="/workouts/:id" element={<WorkoutDetailPage />} />
         <Route path="/workouts/:id/play" element={<WorkoutPlayerPage />} />

@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc:*)",
+      "Bash(node -e:*)",
+      "Bash(npm run build:*)",
+      "Bash(ipconfig:*)",
+      "Bash(npm install:*)",
+      "Bash(node scripts/generate-icons.cjs:*)",
+      "Bash(npx vercel:*)",
+      "Bash(gh auth status:*)",
+      "Bash(git config:*)"
+    ]
+  }
+}

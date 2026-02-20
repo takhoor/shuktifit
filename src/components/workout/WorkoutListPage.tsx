@@ -20,12 +20,21 @@ export function WorkoutListPage() {
       <Header
         title="Workouts"
         right={
-          <Button
-            size="sm"
-            onClick={() => navigate('/workouts/new?type=push')}
-          >
-            + New
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => navigate('/workouts/templates')}
+            >
+              Templates
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => navigate('/workouts/new?type=push')}
+            >
+              + New
+            </Button>
+          </div>
         }
       />
       <div className="flex-1 overflow-y-auto scrollbar-hide px-4 pb-8">
@@ -87,6 +96,11 @@ function WorkoutRow({ workout }: { workout: Workout }) {
               <h3 className="text-sm font-semibold text-text-primary capitalize">
                 {PPL_LABELS[pplType] ?? workout.type}
               </h3>
+              {workout.aiGenerated && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-900/30 text-purple-400">
+                  AI
+                </span>
+              )}
               <StatusBadge status={workout.status} />
             </div>
             <p className="text-xs text-text-secondary">

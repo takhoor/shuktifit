@@ -1,5 +1,6 @@
 import { Outlet } from 'react-router-dom';
 import { BottomTabBar } from './BottomTabBar';
+import { ChatFAB } from '../chat/ChatFAB';
 
 export function AppShell() {
   return (
@@ -8,6 +9,7 @@ export function AppShell() {
         <Outlet />
       </main>
       <BottomTabBar />
+      <ChatFAB />
     </div>
   );
 }

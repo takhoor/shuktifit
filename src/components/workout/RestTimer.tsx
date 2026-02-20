@@ -8,6 +8,9 @@ export function RestTimer() {
   const target = useWorkoutStore((s) => s.restTimerTarget);
   const tick = useWorkoutStore((s) => s.tickTimer);
   const skip = useWorkoutStore((s) => s.skipTimer);
+  const supersetReturnIndex = useWorkoutStore((s) => s.supersetReturnIndex);
+  const goToExercise = useWorkoutStore((s) => s.goToExercise);
+  const setSupersetReturn = useWorkoutStore((s) => s.setSupersetReturn);
   const intervalRef = useRef<ReturnType<typeof setInterval>>(null);
 
   useEffect(() => {
@@ -19,20 +22,32 @@ export function RestTimer() {
     };
   }, [running, tick]);
 
-  // Vibrate when timer reaches 0
+  // Vibrate and handle superset return when timer reaches 0
   useEffect(() => {
     if (!running && seconds === 0 && target > 0) {
       if (navigator.vibrate) {
         navigator.vibrate([200, 100, 200]);
       }
+      if (supersetReturnIndex != null) {
+        goToExercise(supersetReturnIndex);
+        setSupersetReturn(null);
+      }
     }
-  }, [running, seconds, target]);
+  }, [running, seconds, target, supersetReturnIndex, goToExercise, setSupersetReturn]);
 
   if (!running && seconds === 0) return null;
 
   const progress = target > 0 ? (target - seconds) / target : 0;
   const circumference = 2 * Math.PI * 45;
   const offset = circumference * (1 - progress);
+
+  const handleSkip = () => {
+    if (supersetReturnIndex != null) {
+      goToExercise(supersetReturnIndex);
+      setSupersetReturn(null);
+    }
+    skip();
+  };
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/80">
@@ -68,7 +83,7 @@ export function RestTimer() {
           </div>
         </div>
         <button
-          onClick={skip}
+          onClick={handleSkip}
           className="mt-8 px-8 py-3 rounded-xl bg-bg-elevated text-text-secondary font-semibold active:bg-bg-card"
         >
           Skip Rest
