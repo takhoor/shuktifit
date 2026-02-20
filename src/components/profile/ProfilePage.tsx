@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Header } from '../layout/Header';
 import { Card } from '../ui/Card';
@@ -15,6 +15,7 @@ import {
   syncWithingsData,
   disconnectWithings,
 } from '../../services/withings';
+import { exportAllData, downloadExport, importData } from '../../services/dataPortability';
 
 export function ProfilePage() {
   const profile = useUserProfile();
@@ -23,6 +24,9 @@ export function ProfilePage() {
   const [editData, setEditData] = useState<Record<string, unknown>>({});
   const [syncing, setSyncing] = useState(false);
   const [callbackHandled, setCallbackHandled] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Handle Withings OAuth callback params
   useEffect(() => {
@@ -296,6 +300,65 @@ export function ProfilePage() {
               <polyline points="9 18 15 12 9 6" />
             </svg>
           </Link>
+        </Card>
+
+        {/* Data Management */}
+        <Card>
+          <h3 className="text-sm font-semibold text-text-secondary mb-3">
+            Data
+          </h3>
+          <div className="space-y-2">
+            <button
+              onClick={async () => {
+                setExporting(true);
+                try {
+                  const json = await exportAllData();
+                  downloadExport(json);
+                  toast('Backup downloaded', 'success');
+                } catch {
+                  toast('Export failed', 'error');
+                } finally {
+                  setExporting(false);
+                }
+              }}
+              disabled={exporting}
+              className="w-full py-2.5 rounded-lg text-xs font-medium bg-accent text-white disabled:opacity-50"
+            >
+              {exporting ? 'Exporting...' : 'Export Backup'}
+            </button>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={importing}
+              className="w-full py-2.5 rounded-lg text-xs font-medium bg-bg-elevated text-text-primary border border-border disabled:opacity-50"
+            >
+              {importing ? 'Importing...' : 'Import Backup'}
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".json"
+              className="hidden"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                setImporting(true);
+                try {
+                  const text = await file.text();
+                  const result = await importData(text);
+                  toast(`Imported ${result.recordsImported} records from ${result.tablesImported} tables`, 'success');
+                  window.location.reload();
+                } catch (err) {
+                  toast(err instanceof Error ? err.message : 'Import failed', 'error');
+                } finally {
+                  setImporting(false);
+                  e.target.value = '';
+                }
+              }}
+            />
+            <p className="text-[10px] text-text-muted text-center">
+              Export your data as JSON to transfer between devices
+            </p>
+          </div>
         </Card>
 
         {/* App Info */}
