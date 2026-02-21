@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Card } from '../ui/Card';
+import { toast } from '../ui/Toast';
 import { saveUserProfile } from '../../hooks/useUserProfile';
 import {
   EQUIPMENT_OPTIONS,
@@ -11,6 +12,7 @@ import {
 } from '../../utils/constants';
 import { today } from '../../utils/dateUtils';
 import { DayPicker } from '../ui/DayPicker';
+import { importData } from '../../services/dataPortability';
 
 interface OnboardingData {
   name: string;
@@ -42,6 +44,8 @@ function defaultDaysForFrequency(freq: number): number[] {
 export function OnboardingFlow() {
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
+  const [restoring, setRestoring] = useState(false);
+  const restoreInputRef = useRef<HTMLInputElement>(null);
   const [data, setData] = useState<OnboardingData>({
     name: '',
     age: '',
@@ -119,10 +123,39 @@ export function OnboardingFlow() {
             <h1 className="text-3xl font-bold text-text-primary mb-3">
               ShuktiFit
             </h1>
-            <p className="text-text-secondary max-w-xs">
+            <p className="text-text-secondary max-w-xs mb-6">
               Your AI-powered personal trainer. Let's set up your profile to get
               personalized workouts.
             </p>
+            <button
+              onClick={() => restoreInputRef.current?.click()}
+              disabled={restoring}
+              className="text-sm text-accent font-medium active:opacity-70"
+            >
+              {restoring ? 'Restoring...' : 'Restore from Backup'}
+            </button>
+            <input
+              ref={restoreInputRef}
+              type="file"
+              accept=".json"
+              className="hidden"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                setRestoring(true);
+                try {
+                  const text = await file.text();
+                  const result = await importData(text);
+                  toast(`Restored ${result.recordsImported} records`, 'success');
+                  window.location.reload();
+                } catch (err) {
+                  toast(err instanceof Error ? err.message : 'Restore failed', 'error');
+                } finally {
+                  setRestoring(false);
+                  e.target.value = '';
+                }
+              }}
+            />
           </div>
         )}
 
