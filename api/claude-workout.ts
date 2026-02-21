@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+import type { VercelRequest, VercelResponse } from './_types';
 
 const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
