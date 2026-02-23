@@ -10,9 +10,10 @@ export function isWithingsConnected(profile: {
   return !!profile.withingsAccessToken && !!profile.withingsRefreshToken;
 }
 
-export function startWithingsAuth(): void {
+export function startWithingsAuth(accessCode?: string): void {
   const origin = encodeURIComponent(window.location.origin);
-  window.location.href = `${API_BASE}/withings-auth?origin=${origin}`;
+  const codeParam = accessCode ? `&code=${encodeURIComponent(accessCode)}` : '';
+  window.location.href = `${API_BASE}/withings-auth?origin=${origin}${codeParam}`;
 }
 
 export async function handleWithingsCallback(

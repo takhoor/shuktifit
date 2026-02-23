@@ -3,6 +3,15 @@ import type { VercelRequest, VercelResponse } from './_types';
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') return res.status(200).end();
 
+  // Gate Withings access behind a code if configured
+  const accessCode = process.env.WITHINGS_ACCESS_CODE;
+  if (accessCode) {
+    const provided = req.query.code as string;
+    if (provided !== accessCode) {
+      return res.status(403).json({ error: 'Invalid access code' });
+    }
+  }
+
   const clientId = process.env.WITHINGS_CLIENT_ID;
   const redirectUri = process.env.WITHINGS_REDIRECT_URI;
 
