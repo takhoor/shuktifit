@@ -6,6 +6,7 @@ import { DashboardTrackers } from './DashboardTrackers';
 import { StatsRibbon } from './StatsRibbon';
 import { WeekCalendarStrip } from './WeekCalendarStrip';
 import { WithingsWidget } from './WithingsWidget';
+import { QuickLogWeight } from './QuickLogWeight';
 import { Card } from '../ui/Card';
 
 export function DashboardPage() {
@@ -31,6 +32,7 @@ export function DashboardPage() {
         <StatsRibbon />
         <DashboardTrackers />
         <DailyWorkoutCard todayType={todayType} offDaySuggestion={offDaySuggestion} />
+        <QuickLogWeight />
         <WithingsWidget />
         <Card>
           <h3 className="text-xs font-semibold text-text-muted uppercase mb-3">
