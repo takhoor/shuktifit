@@ -2,7 +2,7 @@
 
 > AI-Powered Personal Fitness Tracker PWA (originally spec'd as "FitAI")
 > Original spec: `FitAI-Requirements-Spec_2.md` (v1.0, Feb 6 2026)
-> Last updated: 2026-02-19
+> Last updated: 2026-02-24
 
 ---
 
@@ -17,7 +17,7 @@
 | Local DB | Dexie (IndexedDB) — 16 tables |
 | State | Zustand (workout session, filters) |
 | Charts | Recharts |
-| AI | Claude Sonnet 4.5 via Vercel serverless |
+| AI | Claude Sonnet 4.5 via Vercel serverless (6 endpoints) |
 | Health | Withings OAuth2 integration |
 | PWA | vite-plugin-pwa (service worker, offline) |
 
@@ -59,7 +59,7 @@ src/
   stores/           # Zustand stores (workout session, filters)
   types/            # TypeScript interfaces (database.ts, ai.ts)
   utils/            # Helpers (dates, formatting, constants, PPL calc)
-api/                # Vercel serverless functions (5 endpoints)
+api/                # Vercel serverless functions (6 endpoints)
 ```
 
 ### Routes
@@ -104,7 +104,7 @@ api/                # Vercel serverless functions (5 endpoints)
 
 ## Implementation Progress by Phase
 
-The original spec defines 5 phases. Phases 1-3 are complete. Phase 4 is partial. Phase 5 has schema scaffolded but minimal implementation. Significant additional features have been built beyond the original spec.
+The original spec defines 5 phases. Phases 1-3 are complete. Phase 4 is partial. Phase 5 is partially started (superset mode done, streaks/badges/daily-todos not started). Significant additional features have been built beyond the original spec.
 
 ### Phase 1 — Foundation / MVP [COMPLETE]
 > Core workout logging and execution — usable without AI
@@ -168,9 +168,13 @@ The original spec defines 5 phases. Phases 1-3 are complete. Phase 4 is partial.
 - [ ] **Body measurements history charts** — per-measurement line charts (spec 3.3.3)
   - BodyMeasurementsForm exists for input, but no historical charting per measurement
 
-### Phase 5 — Gamification & Polish [NOT STARTED]
+### Phase 5 — Gamification & Polish [PARTIAL]
 > Motivation and long-term engagement
 
+- [x] **Superset execution mode** — back-to-back exercises, rest only after pair (spec 3.4.1 §4)
+  - Player detects superset groups and advances to next exercise without rest
+  - Rest timer triggers only after completing the last exercise in a group
+  - Visual dot indicators show superset grouping
 - [ ] **Streak system** — workout streak + logging streak with freeze logic (spec 3.9.1)
   - DB table `streaks` exists, StatsRibbon reads it, but **nothing writes to it** (bug B2)
   - Need: service to increment on workout complete, reset on missed days
@@ -185,8 +189,6 @@ The original spec defines 5 phases. Phases 1-3 are complete. Phase 4 is partial.
   - Auto-check when completed in-app, feeds into logging streak
 - [ ] **PR celebration animation** — beyond the current toast notification (spec 3.4.2)
 - [ ] **Push notifications** — workout reminders, streak warnings (spec mentions iOS 16.4+)
-- [ ] **Superset execution mode** — back-to-back exercises, rest only after pair (spec 3.4.1 §4)
-  - `supersetGroup` field exists on WorkoutExercise, but player doesn't handle superset flow
 - [ ] **Offline AI request queueing** — queue when offline, process when reconnected (spec 9.2)
 - [ ] **Performance optimization** — app load <2s on 4G, set logging <100ms (spec 9.1)
 
@@ -207,6 +209,15 @@ The original spec defines 5 phases. Phases 1-3 are complete. Phase 4 is partial.
 - [x] **AI chat panel** — floating chat FAB with contextual fitness Q&A powered by Claude
 - [x] **DayPicker component** — reusable 7-day toggle used in onboarding and calendar settings
 - [x] **UTC date migration** — one-time migration to fix data points stored with UTC dates from timezone bug
+- [x] **Data export/import** — full JSON backup of all 16+ user data tables from Profile page; import restores everything; timestamped download files
+- [x] **Restore from onboarding** — "Restore from Backup" option on the Welcome screen so users can import data before completing setup
+- [x] **Quick log weight card** — dashboard card showing latest weight + body fat with one-tap logging modal and chart shortcut
+- [x] **Withings access code gate** — server-side access code required before connecting to Withings (env var `WITHINGS_ACCESS_CODE`); unrestricted if not set
+- [x] **Swipe-to-delete sets** — swipe gesture on set rows during active workout to remove a set
+- [x] **Edit completed sets** — tap a completed set to re-enter edit mode with save/cancel
+- [x] **Post-workout stat editing** — edit mode on WorkoutDetailPage to modify stats after completing a workout, with automatic recalculation
+- [x] **Today widget type picker** — WorkoutTypePickerModal on the daily workout card to override the scheduled PPL type
+- [x] **PWA icons & auto-update** — 192x192 and 512x512 app icons; service worker with `registerType: 'autoUpdate'`
 
 ---
 
@@ -215,8 +226,8 @@ The original spec defines 5 phases. Phases 1-3 are complete. Phase 4 is partial.
 These items come from the spec's "Post-MVP Backlog" (Section 10) plus ideas identified during development:
 
 ### Data & Export
-- [ ] **Data export** — CSV/JSON export of all training data (spec 9.3)
-- [ ] **Backup/restore** — IndexedDB backup to file
+- [x] ~~**Data export** — CSV/JSON export of all training data (spec 9.3)~~ — JSON export implemented via Profile page
+- [x] ~~**Backup/restore** — IndexedDB backup to file~~ — full JSON backup/restore with onboarding restore option
 - [ ] **Cloud backup / sync across devices**
 
 ### Advanced Training
@@ -251,13 +262,13 @@ These items come from the spec's "Post-MVP Backlog" (Section 10) plus ideas iden
 
 ## Known Bugs
 
-| ID | Severity | Description | Location |
-|----|----------|-------------|----------|
-| B1 | High | Withings sync returns `{ synced: true }` even after catching errors — masks failures | `src/services/withings.ts:203-205` |
-| B2 | Medium | Streaks display in StatsRibbon but are never populated — always shows empty/zero | `src/components/dashboard/StatsRibbon.tsx` |
-| B3 | Medium | AI service `.catch(() => ({}))` returns empty object on JSON parse failure — no error feedback to user | `src/services/ai.ts:18,33` |
-| B4 | Medium | Withings token refresh failure is silently swallowed — subsequent API calls use expired credentials | `api/withings-data.ts:72-74` |
-| B5 | Low | Vite dev server silently converts malformed JSON request bodies to `{}` | `vite.config.ts:40` |
+| ID | Severity | Description | Location | Status |
+|----|----------|-------------|----------|--------|
+| B1 | High | Withings sync returns `{ synced: true }` even after catching errors — masks failures | `src/services/withings.ts` | **Fixed** — now logs and returns error message |
+| B2 | Medium | Streaks display in StatsRibbon but are never populated — always shows empty/zero | `src/components/dashboard/StatsRibbon.tsx` | **Open** — still nothing writes to streaks table |
+| B3 | Medium | AI service `.catch(() => ({}))` returns empty object on JSON parse failure — no error feedback to user | `src/services/ai.ts` | **Fixed** — errors now properly thrown |
+| B4 | Medium | Withings token refresh failure is silently swallowed — subsequent API calls use expired credentials | `api/withings-data.ts` | **Fixed** — refresh errors logged and returned |
+| B5 | Low | Vite dev server silently converts malformed JSON request bodies to `{}` | `vite.config.ts:40` | **Won't fix** — acceptable dev-only fallback |
 
 ---
 
@@ -271,13 +282,14 @@ These items come from the spec's "Post-MVP Backlog" (Section 10) plus ideas iden
 
 ## Missing API Endpoints (from spec)
 
-The spec defines 9 backend endpoints. 5 are implemented, 4 are missing:
+The spec defines 9 backend endpoints. 6 are implemented, 2 are missing:
 
 | Endpoint | Status | Notes |
 |----------|--------|-------|
 | `POST /api/claude-workout` | Done | AI workout generation |
 | `POST /api/claude-substitute` | Done | AI exercise substitution |
-| `GET /api/withings-auth` | Done | OAuth2 initiation |
+| `POST /api/claude-chat` | Done | AI coaching chat (beyond spec) |
+| `GET /api/withings-auth` | Done | OAuth2 initiation (with access code gate) |
 | `GET /api/withings-callback` | Done | OAuth2 token exchange |
 | `POST /api/withings-data` | Done | Fetch weight/activity/sleep (combined endpoint) |
 | `POST /api/ai/analyze-body` | **Missing** | Phase 4 — send photos to Claude Vision for body comp analysis |
@@ -364,7 +376,7 @@ Quick reference of what the original spec asks for that isn't built yet:
 | 3.2.4 | AI coaching notes (proactive insights) | Chat panel exists but no proactive push |
 | 3.3.1 | Progress photo capture with guided pose overlay | No camera UI |
 | 3.3.2 | AI body composition analysis via Claude Vision | No endpoint or UI |
-| 3.4.1 §4 | Superset execution mode in workout player | Field exists, player ignores it |
+| 3.4.1 §4 | Superset execution mode in workout player | **Done** — player handles superset groups |
 | 3.4.2 | "Last session" reference on active exercise view | Not shown during workout |
 | 3.5.2 | Body map visual selector for muscle group filtering | Text-based filter only |
 | 3.6.2 | Daily to-do auto-generation system | No implementation |
@@ -372,7 +384,7 @@ Quick reference of what the original spec asks for that isn't built yet:
 | 3.9.1 | Streak system with freeze logic | Schema only, nothing writes |
 | 3.9.2 | Badge/achievement system with trophy case | Schema only |
 | 9.2 | Offline AI request queueing | Not implemented |
-| 9.3 | Export functionality (JSON/CSV) | Not implemented |
+| 9.3 | Export functionality (JSON/CSV) | **Done** — JSON export/import from Profile page |
 
 ---
 
@@ -383,3 +395,5 @@ Quick reference of what the original spec asks for that isn't built yet:
 | 2026-02-11 | Initial project audit. Documented architecture, identified stub features (badges, streaks, dailyTodos, bodyAnalyses), catalogued 5 bugs, found dead code (pplScheduler.ts). Created roadmap. Reviewed original spec — aligned phase structure, identified 14 spec-vs-implementation gaps, 2 missing API endpoints. |
 | 2026-02-12 – 2026-02-18 | Major feature sprint: Dashboard trackers (water, sleep, calories with quick-add & daily goals), custom data series with charting & overlay, Withings dashboard widget, check-in banner, AI chat panel (floating FAB + contextual Q&A), workout templates (35 curated templates including dumbbell/bodyweight circuits & supersets), template browser page, calendar day modal with workout creation, exercise swap/remove during active workouts, UTC date migration fix. |
 | 2026-02-19 | Workout day scheduling: users specify training days (Mon-Sun), PPL cycle advances only on those days with O(1) counting algorithm. Smart off-day suggestions with muscle-overlap conflict scoring. DayPicker component. 6-step onboarding with training day picker. Rest day styling across dashboard, calendar, and week strip. Added 14 new dumbbell+bodyweight templates (circuits & supersets). Fixed UTC date migration for tracker data. Updated roadmap. |
+| 2026-02-19 – 2026-02-23 | Superset execution mode in workout player (back-to-back exercises, rest after group). Swipe-to-delete sets, edit completed sets, post-workout stat editing. Today widget type picker. Data export/import (full JSON backup of all tables from Profile page). Restore from backup on onboarding Welcome screen. Quick log weight dashboard card. Withings access code gate (server-side env var). PWA icons (192/512) and auto-update service worker. Fixed Vercel @vercel/node import with inline types. Bugs B1, B3, B4 fixed. |
+| 2026-02-24 | Roadmap review and update — documented all changes since Feb 19, updated phase statuses, marked resolved bugs, updated API endpoint count, added new beyond-spec features. |
