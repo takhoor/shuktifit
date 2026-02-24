@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { SpeedInsights } from '@vercel/speed-insights/react'
 import { AppShell } from './components/layout/AppShell'
 import { DashboardPage } from './components/dashboard/DashboardPage'
 import { WorkoutListPage } from './components/workout/WorkoutListPage'
@@ -61,6 +62,7 @@ export function App() {
     <BrowserRouter>
       <AppRoutes />
       <ToastContainer />
+      <SpeedInsights />
     </BrowserRouter>
   )
 }
