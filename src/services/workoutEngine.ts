@@ -536,7 +536,7 @@ export async function deleteWorkout(workoutId: number): Promise<void> {
   );
 }
 
-async function findExerciseByName(name: string): Promise<{ id: string; name: string } | null> {
+export async function findExerciseByName(name: string): Promise<{ id: string; name: string } | null> {
   const normalized = name.toLowerCase().trim();
 
   // Try exact match first

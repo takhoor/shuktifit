@@ -1,28 +1,40 @@
 import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ChatBubble } from './ChatBubble';
+import { WorkoutActionCard } from './WorkoutActionCard';
 import { Spinner } from '../ui/Spinner';
 import { useChatStore } from '../../stores/useChatStore';
+import { useWorkoutStore } from '../../stores/useWorkoutStore';
 import { useMessages, useConversations } from '../../hooks/useChat';
 import { sendChatMessage } from '../../services/ai';
-import { buildChatContext } from '../../services/chatContext';
+import { buildChatContext, buildTodayWorkoutContext } from '../../services/chatContext';
+import { executeCreateWorkout, executeModifyWorkout } from '../../services/chatActionExecutor';
+import { startWorkout as engineStartWorkout } from '../../services/workoutEngine';
+import { toast } from '../ui/Toast';
 import { db } from '../../db';
+import type { PendingAction, CreateWorkoutInput, ModifyWorkoutInput } from '../../types/chatActions';
 
 export function ChatPanel() {
   const { isOpen, closeChat, activeConversationId, setActiveConversation, isLoading, setLoading } =
     useChatStore();
+  const { startWorkout: storeStartWorkout } = useWorkoutStore();
   const messages = useMessages(activeConversationId);
   const conversations = useConversations();
   const [input, setInput] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
+  const [actionStatus, setActionStatus] = useState<'idle' | 'applying' | 'success' | 'error'>('idle');
+  const [actionError, setActionError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const navigate = useNavigate();
 
-  // Auto-scroll to bottom on new messages
+  // Auto-scroll to bottom on new messages or pending action changes
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [messages, pendingAction]);
 
   // Focus input when opened
   useEffect(() => {
@@ -36,6 +48,11 @@ export function ChatPanel() {
   const handleSend = async () => {
     const text = input.trim();
     if (!text || isLoading) return;
+
+    // Clear any stale pending action from a previous message
+    setPendingAction(null);
+    setActionStatus('idle');
+    setActionError(null);
 
     setInput('');
     setError(null);
@@ -63,29 +80,42 @@ export function ChatPanel() {
         createdAt: now,
       });
 
-      // Build context and get history
-      const context = await buildChatContext();
+      // Build context (general + today's workout with IDs for agentic actions)
+      const [context, todayWorkoutContext] = await Promise.all([
+        buildChatContext(),
+        buildTodayWorkoutContext(),
+      ]);
+
       const history = await db.chatMessages
         .where('conversationId')
         .equals(convId)
         .sortBy('createdAt');
-
       const historyForAPI = history.map((m) => ({ role: m.role, content: m.content }));
 
-      // Send to AI
-      const reply = await sendChatMessage(text, context, historyForAPI);
+      // Send to AI — response may include a toolCall for workout actions
+      const response = await sendChatMessage(text, context, historyForAPI, todayWorkoutContext);
 
       // Save assistant reply
       const replyNow = new Date().toISOString();
       await db.chatMessages.add({
         conversationId: convId,
         role: 'assistant',
-        content: reply,
+        content: response.reply,
         createdAt: replyNow,
       });
 
-      // Update conversation timestamp
       await db.chatConversations.update(convId, { updatedAt: replyNow });
+
+      // If Claude called a tool, surface it as a pending action card
+      if (response.toolCall) {
+        const { name, input: toolInput } = response.toolCall;
+        if (name === 'create_workout') {
+          setPendingAction({ type: 'create', input: toolInput as CreateWorkoutInput });
+        } else if (name === 'modify_workout') {
+          setPendingAction({ type: 'modify', input: toolInput as ModifyWorkoutInput });
+        }
+        setActionStatus('idle');
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to send message');
     } finally {
@@ -93,9 +123,58 @@ export function ChatPanel() {
     }
   };
 
+  const handleConfirmAction = async (mode?: 'add' | 'start') => {
+    if (!pendingAction) return;
+    setActionStatus('applying');
+    setActionError(null);
+
+    try {
+      if (pendingAction.type === 'create') {
+        const workoutId = await executeCreateWorkout(pendingAction.input);
+        setActionStatus('success');
+        if (mode === 'start') {
+          await engineStartWorkout(workoutId);
+          storeStartWorkout(workoutId);
+          setTimeout(() => {
+            setPendingAction(null);
+            setActionStatus('idle');
+            closeChat();
+            navigate(`/workouts/${workoutId}/play`);
+          }, 800);
+        } else {
+          toast('Workout created! View it in your workouts list.', 'success');
+          setTimeout(() => {
+            setPendingAction(null);
+            setActionStatus('idle');
+          }, 3000);
+        }
+      } else {
+        await executeModifyWorkout(pendingAction.input);
+        setActionStatus('success');
+        toast('Workout updated!', 'success');
+        setTimeout(() => {
+          setPendingAction(null);
+          setActionStatus('idle');
+        }, 3000);
+      }
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Action failed. Please try again.');
+      setActionStatus('error');
+    }
+  };
+
+  const handleDismissAction = () => {
+    setPendingAction(null);
+    setActionStatus('idle');
+    setActionError(null);
+  };
+
   const handleNewConversation = () => {
     setActiveConversation(null);
     setError(null);
+    setPendingAction(null);
+    setActionStatus('idle');
+    setActionError(null);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -172,6 +251,15 @@ export function ChatPanel() {
               {messages.map((msg) => (
                 <ChatBubble key={msg.id} message={msg} />
               ))}
+              {pendingAction && (
+                <WorkoutActionCard
+                  action={pendingAction}
+                  status={actionStatus}
+                  error={actionError}
+                  onConfirm={handleConfirmAction}
+                  onDismiss={handleDismissAction}
+                />
+              )}
               {isLoading && (
                 <div className="flex justify-start">
                   <div className="bg-bg-elevated rounded-2xl rounded-bl-md px-4 py-3">
@@ -186,7 +274,7 @@ export function ChatPanel() {
               <span className="text-4xl block mb-3">💬</span>
               <p className="text-sm text-text-secondary mb-1">Ask your AI coach anything</p>
               <p className="text-xs text-text-muted">
-                Progress insights, plateau advice, form tips, and more
+                Progress insights, plateau advice, form tips — or ask to create a workout
               </p>
             </div>
           )}

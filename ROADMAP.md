@@ -239,6 +239,9 @@ These items come from the spec's "Post-MVP Backlog" (Section 10) plus ideas iden
 - [ ] **Cardio workout support** — timed/distance-based workouts
 - [x] ~~**Rest day active recovery suggestions**~~ — implemented via smart off-day suggestions
 
+### AI Enhancements
+- [x] **Agentic AI coach** — AI can see today's full workout (with exercise IDs), create new workouts, and modify today's planned workout from within chat; uses Claude tool use (`create_workout` / `modify_workout`); `WorkoutActionCard` confirmation UI; executor validates IDs before applying changes; "Start Now" navigates directly to workout player
+
 ### UX Enhancements
 - [ ] **Exercise search improvements** — fuzzy matching, recent/favorites
 - [ ] **Body map visual selector** for muscle group filtering (spec 3.5.2)
@@ -396,4 +399,4 @@ Quick reference of what the original spec asks for that isn't built yet:
 | 2026-02-12 – 2026-02-18 | Major feature sprint: Dashboard trackers (water, sleep, calories with quick-add & daily goals), custom data series with charting & overlay, Withings dashboard widget, check-in banner, AI chat panel (floating FAB + contextual Q&A), workout templates (35 curated templates including dumbbell/bodyweight circuits & supersets), template browser page, calendar day modal with workout creation, exercise swap/remove during active workouts, UTC date migration fix. |
 | 2026-02-19 | Workout day scheduling: users specify training days (Mon-Sun), PPL cycle advances only on those days with O(1) counting algorithm. Smart off-day suggestions with muscle-overlap conflict scoring. DayPicker component. 6-step onboarding with training day picker. Rest day styling across dashboard, calendar, and week strip. Added 14 new dumbbell+bodyweight templates (circuits & supersets). Fixed UTC date migration for tracker data. Updated roadmap. |
 | 2026-02-19 – 2026-02-23 | Superset execution mode in workout player (back-to-back exercises, rest after group). Swipe-to-delete sets, edit completed sets, post-workout stat editing. Today widget type picker. Data export/import (full JSON backup of all tables from Profile page). Restore from backup on onboarding Welcome screen. Quick log weight dashboard card. Withings access code gate (server-side env var). PWA icons (192/512) and auto-update service worker. Fixed Vercel @vercel/node import with inline types. Bugs B1, B3, B4 fixed. |
-| 2026-02-24 | Roadmap review and update — documented all changes since Feb 19, updated phase statuses, marked resolved bugs, updated API endpoint count, added new beyond-spec features. |
+| 2026-02-24 | Roadmap review and update — documented all changes since Feb 19, updated phase statuses, marked resolved bugs, updated API endpoint count, added new beyond-spec features. Implemented agentic AI coach: Claude tool use in `claude-chat` API (`create_workout` + `modify_workout` tools), `buildTodayWorkoutContext()` injects today's workout with DB IDs into system prompt, `chatActionExecutor.ts` executes confirmed actions via `workoutEngine`, `WorkoutActionCard` component with preview/applying/success/error states and "Add to Workouts" / "Start Now" / "Apply Changes" buttons. |

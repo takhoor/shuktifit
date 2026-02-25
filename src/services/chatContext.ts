@@ -1,4 +1,5 @@
 import { db } from '../db';
+import { today } from '../utils/dateUtils';
 
 export async function buildChatContext(): Promise<string> {
   const parts: string[] = [];
@@ -137,4 +138,38 @@ export async function buildChatContext(): Promise<string> {
   }
 
   return parts.filter(Boolean).join('\n\n');
+}
+
+export async function buildTodayWorkoutContext(): Promise<string> {
+  const todayStr = today();
+
+  const todayWorkout = await db.workouts
+    .where('date')
+    .equals(todayStr)
+    .and((w) => w.status === 'planned' || w.status === 'in_progress')
+    .first();
+
+  if (!todayWorkout) {
+    return 'No workout planned or in progress for today.';
+  }
+
+  const exercises = await db.workoutExercises
+    .where('workoutId')
+    .equals(todayWorkout.id!)
+    .sortBy('order');
+
+  const statusLabel = todayWorkout.status === 'in_progress' ? 'IN PROGRESS' : 'PLANNED';
+
+  const exerciseLines = exercises.map(
+    (ex) =>
+      `  - [workoutExerciseId: ${ex.id}] ${ex.exerciseName}: ` +
+      `${ex.targetSets}x${ex.targetReps} @ ${ex.suggestedWeight} lbs, rest ${ex.restSeconds}s` +
+      (ex.isCompleted ? ' (completed)' : ''),
+  );
+
+  return (
+    `## Today's Workout [workoutId: ${todayWorkout.id}] — ${statusLabel}\n` +
+    `Type: ${todayWorkout.type}\n` +
+    `Exercises:\n${exerciseLines.join('\n')}`
+  );
 }

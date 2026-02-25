@@ -1,4 +1,5 @@
 import type { AIWorkoutRequest, AIWorkoutResponse, AISubstituteRequest, AISubstituteResponse } from '../types/ai';
+import type { ChatAPIResponse } from '../types/chatActions';
 import { db } from '../db';
 import type { UserProfile } from '../types/database';
 
@@ -126,18 +127,19 @@ export async function sendChatMessage(
   message: string,
   context: string,
   conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }>,
-): Promise<string> {
+  todayWorkoutContext?: string,
+): Promise<ChatAPIResponse> {
   const res = await fetch(`${API_BASE}/claude-chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message, context, conversationHistory }),
+    body: JSON.stringify({ message, context, conversationHistory, todayWorkoutContext }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.error || 'Failed to get AI response');
   }
-  const data = await res.json();
-  return data.reply;
+  const data: ChatAPIResponse = await res.json();
+  return data;
 }
 
 function profileToContext(profile: UserProfile) {
