@@ -10,7 +10,7 @@ import type { CreateWorkoutInput, ModifyWorkoutInput } from '../types/chatAction
 import type { AIWorkoutResponse } from '../types/ai';
 import { today } from '../utils/dateUtils';
 
-export async function executeCreateWorkout(input: CreateWorkoutInput): Promise<number> {
+export async function executeCreateWorkout(input: CreateWorkoutInput, name?: string): Promise<number> {
   // Guard: refuse if a non-completed workout already exists for today
   const todayStr = today();
   const existing = await db.workouts
@@ -40,6 +40,11 @@ export async function executeCreateWorkout(input: CreateWorkoutInput): Promise<n
   };
 
   const workoutId = await createAIWorkout(input.workout_type, aiResponse);
+
+  if (name && name.trim()) {
+    await db.workouts.update(workoutId, { name: name.trim() });
+  }
+
   return workoutId;
 }
 

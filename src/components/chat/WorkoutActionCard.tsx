@@ -8,7 +8,7 @@ interface WorkoutActionCardProps {
   action: PendingAction;
   status: 'idle' | 'applying' | 'success' | 'error';
   error: string | null;
-  onConfirm: (mode?: 'add' | 'start') => void;
+  onConfirm: (mode?: 'add' | 'start', name?: string) => void;
   onDismiss: () => void;
 }
 
@@ -20,9 +20,12 @@ export function WorkoutActionCard({
   onDismiss,
 }: WorkoutActionCardProps) {
   const isCreate = action.type === 'create';
-  const accentColor = isCreate
-    ? PPL_COLORS[(action.input as CreateWorkoutInput).workout_type]
-    : '#4DABF7';
+  const createInput = isCreate ? (action.input as CreateWorkoutInput) : null;
+  const accentColor = createInput ? PPL_COLORS[createInput.workout_type] : '#4DABF7';
+  const defaultName = createInput
+    ? `AI ${capitalize(createInput.workout_type)} Day`
+    : '';
+  const [workoutName, setWorkoutName] = useState(defaultName);
 
   return (
     <div className="flex justify-start my-2 px-1">
@@ -37,16 +40,31 @@ export function WorkoutActionCard({
             <div>
               <p className="text-sm font-bold text-text-primary leading-tight">
                 {isCreate
-                  ? `Create ${capitalize((action.input as CreateWorkoutInput).workout_type)} Workout`
+                  ? `Create ${capitalize(createInput!.workout_type)} Workout`
                   : 'Modify Today\'s Workout'}
               </p>
               <p className="text-xs text-text-muted">
                 {isCreate
-                  ? `${(action.input as CreateWorkoutInput).exercises.length} exercises · ~${(action.input as CreateWorkoutInput).estimated_duration} min`
+                  ? `${createInput!.exercises.length} exercises · ~${createInput!.estimated_duration} min`
                   : (action.input as ModifyWorkoutInput).summary}
               </p>
             </div>
           </div>
+
+          {/* Name input (create mode only) */}
+          {isCreate && status !== 'success' && (
+            <div>
+              <label className="text-xs text-text-muted block mb-1">Workout name</label>
+              <input
+                type="text"
+                value={workoutName}
+                onChange={(e) => setWorkoutName(e.target.value)}
+                placeholder={defaultName}
+                className="w-full bg-bg-elevated rounded-lg px-3 py-1.5 text-sm text-text-primary border border-border outline-none focus:border-accent placeholder:text-text-muted"
+                disabled={status !== 'idle'}
+              />
+            </div>
+          )}
 
           {/* Body */}
           {status !== 'success' && (
@@ -78,10 +96,10 @@ export function WorkoutActionCard({
               </Button>
               {isCreate ? (
                 <>
-                  <Button variant="secondary" size="sm" onClick={() => onConfirm('add')}>
+                  <Button variant="secondary" size="sm" onClick={() => onConfirm('add', workoutName.trim() || defaultName)}>
                     Add to Workouts
                   </Button>
-                  <Button size="sm" onClick={() => onConfirm('start')} style={{ backgroundColor: accentColor }}>
+                  <Button size="sm" onClick={() => onConfirm('start', workoutName.trim() || defaultName)} style={{ backgroundColor: accentColor }}>
                     Start Now
                   </Button>
                 </>
@@ -105,7 +123,7 @@ export function WorkoutActionCard({
               <Button variant="ghost" size="sm" onClick={onDismiss} className="text-text-muted">
                 Dismiss
               </Button>
-              <Button size="sm" onClick={() => onConfirm()}>
+              <Button size="sm" onClick={() => onConfirm(undefined, workoutName.trim() || defaultName)}>
                 Retry
               </Button>
             </div>

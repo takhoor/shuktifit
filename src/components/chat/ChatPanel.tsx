@@ -123,14 +123,14 @@ export function ChatPanel() {
     }
   };
 
-  const handleConfirmAction = async (mode?: 'add' | 'start') => {
+  const handleConfirmAction = async (mode?: 'add' | 'start', name?: string) => {
     if (!pendingAction) return;
     setActionStatus('applying');
     setActionError(null);
 
     try {
       if (pendingAction.type === 'create') {
-        const workoutId = await executeCreateWorkout(pendingAction.input);
+        const workoutId = await executeCreateWorkout(pendingAction.input, name);
         setActionStatus('success');
         if (mode === 'start') {
           await engineStartWorkout(workoutId);
