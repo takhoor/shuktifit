@@ -34,8 +34,8 @@ export function TemplateBrowser({ preFilterType }: TemplateBrowserProps) {
   };
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="px-4 pt-4 pb-2">
+    <div className="flex flex-col min-h-0 h-full">
+      <div className="px-4 pt-4 pb-2 shrink-0">
         <h1 className="text-xl font-bold text-text-primary mb-3">Workout Templates</h1>
 
         {/* Type filter */}

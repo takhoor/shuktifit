@@ -54,7 +54,7 @@ export async function syncWithingsData(): Promise<{
 }> {
   const profile = await db.userProfile.toCollection().first();
   if (!profile?.withingsAccessToken || !profile?.withingsRefreshToken) {
-    return { synced: false, weightCount: 0, activityCount: 0 };
+    return { synced: false, weightCount: 0, activityCount: 0, error: 'No Withings connection found. Please connect first.' };
   }
 
   let weightCount = 0;

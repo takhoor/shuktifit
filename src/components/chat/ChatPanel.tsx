@@ -6,7 +6,7 @@ import { Spinner } from '../ui/Spinner';
 import { useChatStore } from '../../stores/useChatStore';
 import { useWorkoutStore } from '../../stores/useWorkoutStore';
 import { useMessages, useConversations } from '../../hooks/useChat';
-import { sendChatMessage } from '../../services/ai';
+import { sendChatMessage, parseWorkoutFromUrl } from '../../services/ai';
 import { buildChatContext, buildTodayWorkoutContext } from '../../services/chatContext';
 import { executeCreateWorkout, executeModifyWorkout } from '../../services/chatActionExecutor';
 import { startWorkout as engineStartWorkout } from '../../services/workoutEngine';
@@ -80,20 +80,29 @@ export function ChatPanel() {
         createdAt: now,
       });
 
-      // Build context (general + today's workout with IDs for agentic actions)
-      const [context, todayWorkoutContext] = await Promise.all([
-        buildChatContext(),
-        buildTodayWorkoutContext(),
-      ]);
+      // Detect if the message contains a URL for workout parsing
+      const urlMatch = text.match(/https?:\/\/[^\s]+/i);
+      let response;
 
-      const history = await db.chatMessages
-        .where('conversationId')
-        .equals(convId)
-        .sortBy('createdAt');
-      const historyForAPI = history.map((m) => ({ role: m.role, content: m.content }));
+      if (urlMatch) {
+        // Route to workout URL parser
+        response = await parseWorkoutFromUrl(urlMatch[0]);
+      } else {
+        // Build context (general + today's workout with IDs for agentic actions)
+        const [context, todayWorkoutContext] = await Promise.all([
+          buildChatContext(),
+          buildTodayWorkoutContext(),
+        ]);
 
-      // Send to AI — response may include a toolCall for workout actions
-      const response = await sendChatMessage(text, context, historyForAPI, todayWorkoutContext);
+        const history = await db.chatMessages
+          .where('conversationId')
+          .equals(convId)
+          .sortBy('createdAt');
+        const historyForAPI = history.map((m) => ({ role: m.role, content: m.content }));
+
+        // Send to AI — response may include a toolCall for workout actions
+        response = await sendChatMessage(text, context, historyForAPI, todayWorkoutContext);
+      }
 
       // Save assistant reply
       const replyNow = new Date().toISOString();

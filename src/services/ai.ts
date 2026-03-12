@@ -142,6 +142,19 @@ export async function sendChatMessage(
   return data;
 }
 
+export async function parseWorkoutFromUrl(url: string): Promise<ChatAPIResponse> {
+  const res = await fetch(`${API_BASE}/parse-workout-url`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to parse workout from URL');
+  }
+  return res.json();
+}
+
 function profileToContext(profile: UserProfile) {
   return {
     name: profile.name,

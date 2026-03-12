@@ -109,7 +109,7 @@ export function ProfilePage() {
       if (result.synced) {
         toast(`Synced ${result.weightCount} weight + ${result.activityCount} activity records`, 'success');
       } else {
-        toast('No Withings connection found', 'error');
+        toast(result.error || 'No Withings connection found', 'error');
       }
     } catch {
       toast('Sync failed', 'error');
