@@ -2,7 +2,7 @@
 
 > AI-Powered Personal Fitness Tracker PWA (originally spec'd as "FitAI")
 > Original spec: `FitAI-Requirements-Spec_2.md` (v1.0, Feb 6 2026)
-> Last updated: 2026-02-24
+> Last updated: 2026-03-12
 
 ---
 
@@ -17,7 +17,7 @@
 | Local DB | Dexie (IndexedDB) — 16 tables |
 | State | Zustand (workout session, filters) |
 | Charts | Recharts |
-| AI | Claude Sonnet 4.5 via Vercel serverless (6 endpoints) |
+| AI | Claude Sonnet 4.5 via Vercel serverless (8 endpoints) |
 | Health | Withings OAuth2 integration |
 | PWA | vite-plugin-pwa (service worker, offline) |
 
@@ -241,6 +241,7 @@ These items come from the spec's "Post-MVP Backlog" (Section 10) plus ideas iden
 
 ### AI Enhancements
 - [x] **Agentic AI coach** — AI can see today's full workout (with exercise IDs), create new workouts, and modify today's planned workout from within chat; uses Claude tool use (`create_workout` / `modify_workout`); `WorkoutActionCard` confirmation UI; executor validates IDs before applying changes; "Start Now" navigates directly to workout player
+- [x] **Parse workout from URL** — paste any web link into AI Coach chat; serverless endpoint (`POST /api/parse-workout-url`) fetches the page, extracts text, and sends to Claude to parse into a structured workout; returns via the same `create_workout` confirmation flow
 
 ### UX Enhancements
 - [ ] **Exercise search improvements** — fuzzy matching, recent/favorites
@@ -272,6 +273,8 @@ These items come from the spec's "Post-MVP Backlog" (Section 10) plus ideas iden
 | B3 | Medium | AI service `.catch(() => ({}))` returns empty object on JSON parse failure — no error feedback to user | `src/services/ai.ts` | **Fixed** — errors now properly thrown |
 | B4 | Medium | Withings token refresh failure is silently swallowed — subsequent API calls use expired credentials | `api/withings-data.ts` | **Fixed** — refresh errors logged and returned |
 | B5 | Low | Vite dev server silently converts malformed JSON request bodies to `{}` | `vite.config.ts:40` | **Won't fix** — acceptable dev-only fallback |
+| B6 | Medium | Withings sync shows generic "No Withings connection found" even when tokens exist but are expired | `src/components/profile/ProfilePage.tsx` | **Fixed** — now shows actual error from sync result |
+| B7 | Medium | Modal close (X) button too small to tap on mobile; stacking issues with nested modals | `src/components/ui/Modal.tsx` | **Fixed** — 44px touch target, explicit z-index, shrink-0 header |
 
 ---
 
@@ -285,7 +288,7 @@ These items come from the spec's "Post-MVP Backlog" (Section 10) plus ideas iden
 
 ## Missing API Endpoints (from spec)
 
-The spec defines 9 backend endpoints. 6 are implemented, 2 are missing:
+The spec defines 9 backend endpoints. 7 are implemented (+1 beyond spec), 2 are missing:
 
 | Endpoint | Status | Notes |
 |----------|--------|-------|
@@ -295,6 +298,7 @@ The spec defines 9 backend endpoints. 6 are implemented, 2 are missing:
 | `GET /api/withings-auth` | Done | OAuth2 initiation (with access code gate) |
 | `GET /api/withings-callback` | Done | OAuth2 token exchange |
 | `POST /api/withings-data` | Done | Fetch weight/activity/sleep (combined endpoint) |
+| `POST /api/parse-workout-url` | Done | Parse workout from web link (beyond spec) |
 | `POST /api/ai/analyze-body` | **Missing** | Phase 4 — send photos to Claude Vision for body comp analysis |
 | `POST /api/ai/progress-report` | **Missing** | Phase 4 — AI-generated weekly progress summary |
 | `GET /api/withings/steps` | N/A | Covered by `/api/withings-data` with `dataType` param |
@@ -400,3 +404,4 @@ Quick reference of what the original spec asks for that isn't built yet:
 | 2026-02-19 | Workout day scheduling: users specify training days (Mon-Sun), PPL cycle advances only on those days with O(1) counting algorithm. Smart off-day suggestions with muscle-overlap conflict scoring. DayPicker component. 6-step onboarding with training day picker. Rest day styling across dashboard, calendar, and week strip. Added 14 new dumbbell+bodyweight templates (circuits & supersets). Fixed UTC date migration for tracker data. Updated roadmap. |
 | 2026-02-19 – 2026-02-23 | Superset execution mode in workout player (back-to-back exercises, rest after group). Swipe-to-delete sets, edit completed sets, post-workout stat editing. Today widget type picker. Data export/import (full JSON backup of all tables from Profile page). Restore from backup on onboarding Welcome screen. Quick log weight dashboard card. Withings access code gate (server-side env var). PWA icons (192/512) and auto-update service worker. Fixed Vercel @vercel/node import with inline types. Bugs B1, B3, B4 fixed. |
 | 2026-02-24 | Roadmap review and update — documented all changes since Feb 19, updated phase statuses, marked resolved bugs, updated API endpoint count, added new beyond-spec features. Implemented agentic AI coach: Claude tool use in `claude-chat` API (`create_workout` + `modify_workout` tools), `buildTodayWorkoutContext()` injects today's workout with DB IDs into system prompt, `chatActionExecutor.ts` executes confirmed actions via `workoutEngine`, `WorkoutActionCard` component with preview/applying/success/error states and "Add to Workouts" / "Start Now" / "Apply Changes" buttons. |
+| 2026-03-12 | Fixed Withings sync error messages (B6 — shows actual error instead of generic message). Fixed Modal close button (B7 — 44px touch target, z-index stacking, shrink-0 header). Fixed TemplateBrowser flex layout inside modal. Added workout URL parsing: `POST /api/parse-workout-url` endpoint fetches page content, Claude extracts structured workout, integrates via existing `create_workout` confirmation flow in chat. |
