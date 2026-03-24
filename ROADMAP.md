@@ -2,7 +2,7 @@
 
 > AI-Powered Personal Fitness Tracker PWA (originally spec'd as "FitAI")
 > Original spec: `FitAI-Requirements-Spec_2.md` (v1.0, Feb 6 2026)
-> Last updated: 2026-03-12
+> Last updated: 2026-03-19
 
 ---
 
@@ -212,12 +212,18 @@ The original spec defines 5 phases. Phases 1-3 are complete. Phase 4 is partial.
 - [x] **Data export/import** — full JSON backup of all 16+ user data tables from Profile page; import restores everything; timestamped download files
 - [x] **Restore from onboarding** — "Restore from Backup" option on the Welcome screen so users can import data before completing setup
 - [x] **Quick log weight card** — dashboard card showing latest weight + body fat with one-tap logging modal and chart shortcut
-- [x] **Withings access code gate** — server-side access code required before connecting to Withings (env var `WITHINGS_ACCESS_CODE`); unrestricted if not set
+- [x] ~~**Withings access code gate**~~ — removed; Withings OAuth now connects directly without access code prompt
 - [x] **Swipe-to-delete sets** — swipe gesture on set rows during active workout to remove a set
 - [x] **Edit completed sets** — tap a completed set to re-enter edit mode with save/cancel
 - [x] **Post-workout stat editing** — edit mode on WorkoutDetailPage to modify stats after completing a workout, with automatic recalculation
 - [x] **Today widget type picker** — WorkoutTypePickerModal on the daily workout card to override the scheduled PPL type
 - [x] **PWA icons & auto-update** — 192x192 and 512x512 app icons; service worker with `registerType: 'autoUpdate'`
+- [x] **Per-exercise rest duration** — tap "Rest: Xs" in workout player to edit rest time per exercise (1–600s); saved to DB
+- [x] **Background-safe rest timer** — rest timer uses absolute end timestamps instead of interval decrements; survives screen lock and app backgrounding via `visibilitychange` listener; end time persisted to sessionStorage
+- [x] **Rest timer ding sound** — Web Audio API two-tone ding plays on rest timer completion alongside vibration; no external audio files needed
+- [x] **Exercise stopwatch** — count-up timer for static/isometric exercises (planks, wall sits); dings when target time is reached; appears as "Timer" button on static exercises
+- [x] **Exercise info modal** — tap exercise name or image during workout to see animated start/end position demo, equipment/muscle pills, and step-by-step instructions
+- [x] **Auto-reset stale workouts** — completing any workout resets all other `in_progress` workouts back to `planned` status
 
 ---
 
@@ -250,12 +256,12 @@ These items come from the spec's "Post-MVP Backlog" (Section 10) plus ideas iden
 - [ ] **Rest timer auto-start** — begin timer after logging a set
 - [ ] **Undo set logging** — allow corrections during workout
 - [ ] **"Last session" reference** on active exercise view (spec 3.4.2)
-- [ ] **Vibration/sound alert** on rest timer completion (spec 3.4.1 §3)
+- [x] ~~**Vibration/sound alert** on rest timer completion (spec 3.4.1 §3)~~ — Web Audio ding + vibration on rest completion
 
 ### Integrations
 - [ ] **Nutrition / calorie tracking integration**
 - [ ] **Meal planning with AI**
-- [ ] **Exercise demo videos** (YouTube integration)
+- [x] ~~**Exercise demo videos**~~ — animated start/end position frames in ExerciseInfoModal during workout (no YouTube yet)
 - [ ] **Apple Health direct access** (if PWA APIs expand)
 - [ ] **Wearable heart rate zone display** during workout
 - [ ] **Voice control during workouts**
@@ -405,3 +411,4 @@ Quick reference of what the original spec asks for that isn't built yet:
 | 2026-02-19 – 2026-02-23 | Superset execution mode in workout player (back-to-back exercises, rest after group). Swipe-to-delete sets, edit completed sets, post-workout stat editing. Today widget type picker. Data export/import (full JSON backup of all tables from Profile page). Restore from backup on onboarding Welcome screen. Quick log weight dashboard card. Withings access code gate (server-side env var). PWA icons (192/512) and auto-update service worker. Fixed Vercel @vercel/node import with inline types. Bugs B1, B3, B4 fixed. |
 | 2026-02-24 | Roadmap review and update — documented all changes since Feb 19, updated phase statuses, marked resolved bugs, updated API endpoint count, added new beyond-spec features. Implemented agentic AI coach: Claude tool use in `claude-chat` API (`create_workout` + `modify_workout` tools), `buildTodayWorkoutContext()` injects today's workout with DB IDs into system prompt, `chatActionExecutor.ts` executes confirmed actions via `workoutEngine`, `WorkoutActionCard` component with preview/applying/success/error states and "Add to Workouts" / "Start Now" / "Apply Changes" buttons. |
 | 2026-03-12 | Fixed Withings sync error messages (B6 — shows actual error instead of generic message). Fixed Modal close button (B7 — 44px touch target, z-index stacking, shrink-0 header). Fixed TemplateBrowser flex layout inside modal. Added workout URL parsing: `POST /api/parse-workout-url` endpoint fetches page content, Claude extracts structured workout, integrates via existing `create_workout` confirmation flow in chat. |
+| 2026-03-19 | Removed Withings access code gate (API + UI prompt). Per-exercise rest duration editing in workout player. Background-safe rest timer using absolute timestamps + visibilitychange listener. Web Audio ding sound on rest completion. Exercise stopwatch for static/isometric exercises with target-time ding. Exercise info modal (animated demo + instructions) on tap in workout player. Auto-reset stale in_progress workouts on completion. |

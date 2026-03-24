@@ -316,6 +316,20 @@ export async function completeWorkout(
     notes: notes ?? workout.notes,
   });
 
+  // Reset any other in_progress workouts back to planned so they can be started fresh
+  const staleWorkouts = await db.workouts
+    .where('status')
+    .equals('in_progress')
+    .toArray();
+  for (const w of staleWorkouts) {
+    if (w.id !== workoutId) {
+      await db.workouts.update(w.id!, {
+        status: 'planned',
+        startedAt: undefined,
+      });
+    }
+  }
+
   return {
     totalVolume,
     durationMinutes,

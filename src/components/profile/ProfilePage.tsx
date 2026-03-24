@@ -280,10 +280,7 @@ export function ProfilePage() {
                 Connect your Withings account to auto-sync weight, steps, heart rate, and sleep data.
               </p>
               <button
-                onClick={() => {
-                  const code = prompt('Enter Withings access code:');
-                  if (code !== null) startWithingsAuth(code || undefined);
-                }}
+                onClick={() => startWithingsAuth()}
                 className="w-full py-2.5 rounded-lg text-xs font-medium bg-accent text-white"
               >
                 Connect Withings

@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useWorkoutStore } from '../../stores/useWorkoutStore';
 import { formatTimer } from '../../utils/formatUtils';
+import { playDing } from '../../utils/sound';
 
 export function RestTimer() {
   const seconds = useWorkoutStore((s) => s.restTimerSeconds);
@@ -13,6 +14,7 @@ export function RestTimer() {
   const setSupersetReturn = useWorkoutStore((s) => s.setSupersetReturn);
   const intervalRef = useRef<ReturnType<typeof setInterval>>(null);
 
+  // Tick every second — uses absolute end time so background time is accounted for
   useEffect(() => {
     if (running) {
       intervalRef.current = setInterval(tick, 1000);
@@ -22,9 +24,21 @@ export function RestTimer() {
     };
   }, [running, tick]);
 
-  // Vibrate and handle superset return when timer reaches 0
+  // Immediately recalculate when tab becomes visible again (covers screen lock / app switch)
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        tick();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [tick]);
+
+  // Play sound, vibrate, and handle superset return when timer reaches 0
   useEffect(() => {
     if (!running && seconds === 0 && target > 0) {
+      playDing();
       if (navigator.vibrate) {
         navigator.vibrate([200, 100, 200]);
       }

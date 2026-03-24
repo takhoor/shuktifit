@@ -7,6 +7,7 @@ interface WorkoutSessionState {
   restTimerSeconds: number;
   restTimerRunning: boolean;
   restTimerTarget: number;
+  restTimerEndTime: number | null; // absolute ms timestamp when rest ends
   supersetReturnIndex: number | null;
 
   startWorkout: (workoutId: number) => void;
@@ -29,6 +30,7 @@ export const useWorkoutStore = create<WorkoutSessionState>()(
       restTimerSeconds: 0,
       restTimerRunning: false,
       restTimerTarget: 0,
+      restTimerEndTime: null,
       supersetReturnIndex: null,
 
       startWorkout: (workoutId) =>
@@ -50,19 +52,28 @@ export const useWorkoutStore = create<WorkoutSessionState>()(
         })),
 
       startRestTimer: (seconds) =>
-        set({ restTimerSeconds: seconds, restTimerRunning: true, restTimerTarget: seconds }),
+        set({
+          restTimerSeconds: seconds,
+          restTimerRunning: true,
+          restTimerTarget: seconds,
+          restTimerEndTime: Date.now() + seconds * 1000,
+        }),
 
       tickTimer: () =>
         set((s) => {
-          if (s.restTimerSeconds <= 1) {
-            return { restTimerSeconds: 0, restTimerRunning: false };
+          if (!s.restTimerEndTime) {
+            return { restTimerSeconds: 0, restTimerRunning: false, restTimerEndTime: null };
           }
-          return { restTimerSeconds: s.restTimerSeconds - 1 };
+          const remaining = Math.round((s.restTimerEndTime - Date.now()) / 1000);
+          if (remaining <= 0) {
+            return { restTimerSeconds: 0, restTimerRunning: false, restTimerEndTime: null };
+          }
+          return { restTimerSeconds: remaining };
         }),
 
-      stopTimer: () => set({ restTimerRunning: false, restTimerSeconds: 0 }),
+      stopTimer: () => set({ restTimerRunning: false, restTimerSeconds: 0, restTimerEndTime: null }),
 
-      skipTimer: () => set({ restTimerRunning: false, restTimerSeconds: 0 }),
+      skipTimer: () => set({ restTimerRunning: false, restTimerSeconds: 0, restTimerEndTime: null }),
 
       setSupersetReturn: (index) => set({ supersetReturnIndex: index }),
 
@@ -73,6 +84,7 @@ export const useWorkoutStore = create<WorkoutSessionState>()(
           restTimerSeconds: 0,
           restTimerRunning: false,
           restTimerTarget: 0,
+          restTimerEndTime: null,
           supersetReturnIndex: null,
         }),
     }),
@@ -83,6 +95,10 @@ export const useWorkoutStore = create<WorkoutSessionState>()(
         activeWorkoutId: state.activeWorkoutId,
         currentExerciseIndex: state.currentExerciseIndex,
         supersetReturnIndex: state.supersetReturnIndex,
+        // Persist timer end time so it survives page refresh / background
+        restTimerEndTime: state.restTimerEndTime,
+        restTimerTarget: state.restTimerTarget,
+        restTimerRunning: state.restTimerRunning,
       }),
     },
   ),

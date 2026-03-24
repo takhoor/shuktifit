@@ -1,11 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useWorkout, useWorkoutExercises, useExerciseSets } from '../../hooks/useWorkouts';
 import { useWorkoutStore } from '../../stores/useWorkoutStore';
-import { logSet, completeWorkout, addSetToExercise, getLastPerformance, removeExerciseFromWorkout, swapExerciseInWorkout, deleteSet, updateCompletedSet } from '../../services/workoutEngine';
+import { logSet, completeWorkout, addSetToExercise, getLastPerformance, removeExerciseFromWorkout, swapExerciseInWorkout, deleteSet, updateCompletedSet, updateExerciseTargets } from '../../services/workoutEngine';
 import { db } from '../../db';
 import { SetRow } from './SetRow';
 import { RestTimer } from './RestTimer';
+import { ExerciseStopwatch } from './ExerciseStopwatch';
+import { ExerciseInfoModal } from './ExerciseInfoModal';
 import { WorkoutSummary } from './WorkoutSummary';
 import { SubstitutionPickerModal } from './SubstitutionPickerModal';
 import { Spinner } from '../ui/Spinner';
@@ -52,11 +54,37 @@ export function WorkoutPlayerPage() {
     primaryMuscles: string[];
     equipment: string | null;
   } | null>(null);
+  const [editingRest, setEditingRest] = useState(false);
+  const [restInput, setRestInput] = useState('');
+  const [showStopwatch, setShowStopwatch] = useState(false);
+  const [isStaticExercise, setIsStaticExercise] = useState(false);
+  const [showExerciseInfo, setShowExerciseInfo] = useState(false);
+  const [fullExercise, setFullExercise] = useState<Exercise | null>(null);
+  const prevExerciseIdRef = useRef<number | undefined>();
+
+  const handleRestSave = async () => {
+    if (!currentExercise?.id) return;
+    const val = parseInt(restInput, 10);
+    if (!isNaN(val) && val > 0 && val <= 600) {
+      await updateExerciseTargets(currentExercise.id, { restSeconds: val });
+    }
+    setEditingRest(false);
+  };
+
+  // Reset visual state and load exercise data when switching exercises
+  if (currentExercise?.id !== prevExerciseIdRef.current) {
+    prevExerciseIdRef.current = currentExercise?.id;
+    setImgErr(false);
+    setShowStopwatch(false);
+  }
 
   useEffect(() => {
     if (currentExercise) {
-      setImgErr(false);
       getLastPerformance(currentExercise.exerciseId).then(setLastPerf);
+      db.exercises.get(currentExercise.exerciseId).then((ex) => {
+        setFullExercise(ex ?? null);
+        setIsStaticExercise(ex?.force === 'static');
+      });
     }
   }, [currentExercise]);
 
@@ -245,29 +273,63 @@ export function WorkoutPlayerPage() {
       </div>
 
       <div className="flex-1 overflow-y-auto scrollbar-hide px-4 pb-8">
-        {/* Exercise Image */}
+        {/* Exercise Image (tap for info) */}
         {exerciseImage && (
-          <div className="w-full h-40 rounded-xl bg-bg-card overflow-hidden mb-3">
+          <button
+            onClick={() => setShowExerciseInfo(true)}
+            className="w-full h-40 rounded-xl bg-bg-card overflow-hidden mb-3"
+          >
             <img
               src={exerciseImage}
               alt={currentExercise?.exerciseName}
               className="w-full h-full object-contain"
               onError={() => setImgErr(true)}
             />
-          </div>
+          </button>
         )}
 
         {/* Exercise Info + Swap/Remove */}
         <div className="mb-4">
           <div className="flex items-start justify-between">
             <div className="flex-1 min-w-0">
-              <h2 className="text-lg font-bold text-text-primary">
-                {currentExercise?.exerciseName}
-              </h2>
+              <button
+                onClick={() => setShowExerciseInfo(true)}
+                className="text-left"
+              >
+                <h2 className="text-lg font-bold text-text-primary">
+                  {currentExercise?.exerciseName}
+                </h2>
+              </button>
               {lastPerf && (
                 <p className="text-xs text-text-secondary mt-1">
                   Last: {lastPerf.totalSets}x{lastPerf.bestReps} @ {formatWeight(lastPerf.bestWeight)}
                 </p>
+              )}
+              {currentExercise && (
+                <div className="flex items-center gap-1 mt-1">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text-muted">
+                    <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
+                  </svg>
+                  {editingRest ? (
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      autoFocus
+                      value={restInput}
+                      onChange={(e) => setRestInput(e.target.value)}
+                      onBlur={handleRestSave}
+                      onKeyDown={(e) => { if (e.key === 'Enter') handleRestSave(); }}
+                      className="w-14 text-xs bg-bg-elevated text-text-primary px-1.5 py-0.5 rounded border border-border outline-none"
+                    />
+                  ) : (
+                    <button
+                      onClick={() => { setRestInput(String(currentExercise.restSeconds)); setEditingRest(true); }}
+                      className="text-xs text-text-muted active:text-accent"
+                    >
+                      Rest: {currentExercise.restSeconds}s
+                    </button>
+                  )}
+                </div>
               )}
             </div>
             <div className="flex gap-1 ml-2 shrink-0">
@@ -315,12 +377,25 @@ export function WorkoutPlayerPage() {
           ))}
         </div>
 
-        <button
-          onClick={handleAddSet}
-          className="w-full py-2.5 text-sm font-medium text-accent active:text-accent-hover"
-        >
-          + Add Set
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={handleAddSet}
+            className="flex-1 py-2.5 text-sm font-medium text-accent active:text-accent-hover"
+          >
+            + Add Set
+          </button>
+          {isStaticExercise && (
+            <button
+              onClick={() => setShowStopwatch(true)}
+              className="flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium text-accent active:text-accent-hover"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
+              </svg>
+              Timer
+            </button>
+          )}
+        </div>
 
         {/* Nav Buttons */}
         <div className="flex gap-3 mt-6">
@@ -354,6 +429,19 @@ export function WorkoutPlayerPage() {
       </div>
 
       <RestTimer />
+
+      {showStopwatch && currentExercise && (
+        <ExerciseStopwatch
+          targetSeconds={currentExercise.targetReps}
+          onClose={() => setShowStopwatch(false)}
+        />
+      )}
+
+      <ExerciseInfoModal
+        open={showExerciseInfo}
+        onClose={() => setShowExerciseInfo(false)}
+        exercise={fullExercise}
+      />
 
       <SubstitutionPickerModal
         open={showSubPicker}
