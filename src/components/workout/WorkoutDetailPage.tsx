@@ -21,8 +21,10 @@ import {
 } from '../../services/workoutEngine';
 import { toast } from '../ui/Toast';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
+import { ExerciseInfoModal } from './ExerciseInfoModal';
+import { db } from '../../db';
 import type { PPLType } from '../../utils/constants';
-import type { ExerciseSet } from '../../types/database';
+import type { Exercise, ExerciseSet } from '../../types/database';
 
 export function WorkoutDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -37,6 +39,12 @@ export function WorkoutDetailPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [removeExId, setRemoveExId] = useState<number | null>(null);
   const [removeExName, setRemoveExName] = useState('');
+  const [infoExercise, setInfoExercise] = useState<Exercise | null>(null);
+
+  const openExerciseInfo = async (exerciseId: string) => {
+    const ex = await db.exercises.get(exerciseId);
+    if (ex) setInfoExercise(ex);
+  };
 
   if (!workout || !exercises || !allSets) {
     return (
@@ -153,9 +161,12 @@ export function WorkoutDetailPage() {
             const sets = setsMap[ex.id!] ?? [];
             return (
               <Card key={ex.id}>
-                <h3 className="font-semibold text-text-primary text-sm mb-2">
+                <button
+                  onClick={() => openExerciseInfo(ex.exerciseId)}
+                  className="font-semibold text-text-primary text-sm mb-2 text-left active:text-accent"
+                >
                   {ex.exerciseName}
-                </h3>
+                </button>
                 {isEditing ? (
                   <>
                     <div className="space-y-2">
@@ -216,6 +227,12 @@ export function WorkoutDetailPage() {
           })}
         </div>
       </div>
+
+      <ExerciseInfoModal
+        open={infoExercise !== null}
+        onClose={() => setInfoExercise(null)}
+        exercise={infoExercise}
+      />
 
       <ConfirmDialog
         open={removeExId !== null}
