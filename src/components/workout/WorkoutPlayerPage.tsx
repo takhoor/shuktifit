@@ -60,7 +60,7 @@ export function WorkoutPlayerPage() {
   const [isStaticExercise, setIsStaticExercise] = useState(false);
   const [showExerciseInfo, setShowExerciseInfo] = useState(false);
   const [fullExercise, setFullExercise] = useState<Exercise | null>(null);
-  const prevExerciseIdRef = useRef<number | undefined>();
+  const prevExerciseIdRef = useRef<number | undefined>(undefined);
 
   const handleRestSave = async () => {
     if (!currentExercise?.id) return;
