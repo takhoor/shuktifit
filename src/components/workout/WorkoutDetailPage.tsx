@@ -18,6 +18,7 @@ import {
   addSetToExercise,
   recalculateWorkoutStats,
   removeExerciseFromWorkout,
+  cloneWorkout,
 } from '../../services/workoutEngine';
 import { toast } from '../ui/Toast';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
@@ -92,6 +93,14 @@ export function WorkoutDetailPage() {
     }
   };
 
+  const handleRedoWorkout = async () => {
+    if (!workoutId) return;
+    const newId = await cloneWorkout(workoutId);
+    startSession(newId);
+    await startWorkout(newId);
+    navigate(`/workouts/${newId}/play`);
+  };
+
   const handleRemoveExercise = async () => {
     if (!removeExId) return;
     await removeExerciseFromWorkout(removeExId);
@@ -148,10 +157,15 @@ export function WorkoutDetailPage() {
           )}
         </Card>
 
-        {/* Resume button for in-progress/planned */}
+        {/* Action buttons based on status */}
         {(workout.status === 'in_progress' || workout.status === 'planned') && (
           <Button className="w-full mb-4" onClick={handleResume}>
             {workout.status === 'in_progress' ? 'Resume Workout' : 'Start Workout'}
+          </Button>
+        )}
+        {workout.status === 'completed' && (
+          <Button className="w-full mb-4" variant="secondary" onClick={handleRedoWorkout}>
+            Do Again
           </Button>
         )}
 

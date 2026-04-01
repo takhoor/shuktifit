@@ -528,6 +528,63 @@ export async function updateWorkoutDate(
   await db.workouts.update(workoutId, { date: newDate });
 }
 
+/**
+ * Clone a workout as a fresh planned workout for today.
+ * Copies all exercises and sets with targets but resets completion state.
+ */
+export async function cloneWorkout(workoutId: number): Promise<number> {
+  const workout = await db.workouts.get(workoutId);
+  if (!workout) throw new Error('Workout not found');
+
+  const exercises = await db.workoutExercises
+    .where('workoutId')
+    .equals(workoutId)
+    .sortBy('order');
+
+  const newWorkoutId = await db.workouts.add({
+    date: today(),
+    type: workout.type,
+    status: 'planned',
+    name: workout.name,
+    aiGenerated: workout.aiGenerated,
+    createdAt: new Date().toISOString(),
+  } as Workout) as number;
+
+  for (const ex of exercises) {
+    const sets = await db.exerciseSets
+      .where('workoutExerciseId')
+      .equals(ex.id!)
+      .sortBy('setNumber');
+
+    const newExId = await db.workoutExercises.add({
+      workoutId: newWorkoutId,
+      exerciseId: ex.exerciseId,
+      exerciseName: ex.exerciseName,
+      order: ex.order,
+      supersetGroup: ex.supersetGroup,
+      targetSets: ex.targetSets,
+      targetReps: ex.targetReps,
+      suggestedWeight: ex.suggestedWeight,
+      restSeconds: ex.restSeconds,
+      isCompleted: false,
+    } as WorkoutExercise) as number;
+
+    for (const set of sets) {
+      await db.exerciseSets.add({
+        workoutExerciseId: newExId,
+        setNumber: set.setNumber,
+        targetReps: set.actualReps ?? set.targetReps,
+        targetWeight: set.actualWeight ?? set.targetWeight,
+        setType: set.setType,
+        isCompleted: false,
+        isPR: false,
+      } as ExerciseSet);
+    }
+  }
+
+  return newWorkoutId;
+}
+
 export async function deleteWorkout(workoutId: number): Promise<void> {
   const exercises = await db.workoutExercises
     .where('workoutId')

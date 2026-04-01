@@ -2,6 +2,7 @@ import type { PPLType } from '../utils/constants';
 import { PPL_TYPES } from '../utils/constants';
 import { getPPLTypeForDate, isWorkoutDay } from '../utils/pplUtils';
 import { toISODate } from '../utils/dateUtils';
+import { db } from '../db';
 
 export function getTodayPPLType(
   pplStartDate: string,
@@ -148,4 +149,78 @@ function buildReason(
   }
 
   return `${capitalize(suggested)} — ${parts.join(' and ')}, so ${suggested} won't interfere with recovery`;
+}
+
+// --- Smart Next-Workout Based on Completion History ---
+
+/**
+ * Determines the best next workout type by looking at recently completed workouts.
+ * Rules:
+ * 1. Don't repeat the same type as yesterday (back-to-back avoidance)
+ * 2. Prioritize the type with the longest gap since last completion
+ * 3. If nothing done recently, default to legs (lower body/core priority)
+ */
+export async function getSmartNextType(): Promise<{ type: PPLType; reason: string }> {
+  const recentWorkouts = await db.workouts
+    .where('status')
+    .equals('completed')
+    .reverse()
+    .sortBy('date');
+
+  // Find the most recent completion date for each type
+  const lastDone: Record<PPLType, string | null> = { push: null, pull: null, legs: null };
+  for (const w of recentWorkouts) {
+    const t = w.type as PPLType;
+    if (t in lastDone && !lastDone[t]) {
+      lastDone[t] = w.date;
+    }
+    // Stop once we've found all three
+    if (lastDone.push && lastDone.pull && lastDone.legs) break;
+  }
+
+  const todayStr = toISODate(new Date());
+  const yesterdayDate = new Date();
+  yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+  const yesterdayStr = toISODate(yesterdayDate);
+
+  // Find what was done yesterday (avoid back-to-back)
+  const yesterdayTypes = recentWorkouts
+    .filter((w) => w.date === yesterdayStr)
+    .map((w) => w.type);
+
+  // Score each type — higher = more neglected = should do next
+  const scored = PPL_TYPES.map((type) => {
+    const last = lastDone[type];
+    let daysSince: number;
+    if (!last) {
+      daysSince = 999; // Never done
+    } else {
+      daysSince = Math.floor(
+        (new Date(todayStr).getTime() - new Date(last).getTime()) / (1000 * 60 * 60 * 24),
+      );
+    }
+
+    // Penalize if done yesterday (back-to-back avoidance)
+    const backToBackPenalty = yesterdayTypes.includes(type) ? -100 : 0;
+
+    return { type, daysSince, score: daysSince + backToBackPenalty };
+  });
+
+  scored.sort((a, b) => b.score - a.score);
+
+  const best = scored[0];
+  const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+  let reason: string;
+  if (best.daysSince >= 999) {
+    reason = `${capitalize(best.type)} — you haven't done this yet, time to start`;
+  } else if (best.daysSince >= 7) {
+    reason = `${capitalize(best.type)} — it's been ${best.daysSince} days since your last ${best.type} workout`;
+  } else if (best.daysSince >= 3) {
+    reason = `${capitalize(best.type)} — last done ${best.daysSince} days ago, muscles are recovered`;
+  } else {
+    reason = `${capitalize(best.type)} — best fit based on your recent schedule`;
+  }
+
+  return { type: best.type, reason };
 }

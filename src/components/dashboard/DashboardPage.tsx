@@ -1,6 +1,7 @@
+import { useState, useEffect } from 'react';
 import { getGreeting, formatDate, toISODate } from '../../utils/dateUtils';
 import { useUserProfile } from '../../hooks/useUserProfile';
-import { getTodayPPLType, suggestOffDayWorkout } from '../../services/pplScheduler';
+import { getTodayPPLType, suggestOffDayWorkout, getSmartNextType } from '../../services/pplScheduler';
 import { DailyWorkoutCard } from './DailyWorkoutCard';
 import { DashboardTrackers } from './DashboardTrackers';
 import { StatsRibbon } from './StatsRibbon';
@@ -8,15 +9,25 @@ import { WeekCalendarStrip } from './WeekCalendarStrip';
 import { WithingsWidget } from './WithingsWidget';
 import { QuickLogWeight } from './QuickLogWeight';
 import { Card } from '../ui/Card';
+import type { PPLType } from '../../utils/constants';
 
 export function DashboardPage() {
   const profile = useUserProfile();
-  const todayType = profile?.pplStartDate
+  const scheduledType = profile?.pplStartDate
     ? getTodayPPLType(profile.pplStartDate, profile.workoutDays)
     : 'push';
 
+  const [smartType, setSmartType] = useState<{ type: PPLType; reason: string } | null>(null);
+
+  useEffect(() => {
+    getSmartNextType().then(setSmartType);
+  }, []);
+
+  // Use smart suggestion, falling back to scheduled type
+  const todayType = smartType?.type ?? (scheduledType === 'rest' ? 'push' : scheduledType);
+
   const offDaySuggestion =
-    todayType === 'rest' && profile?.pplStartDate
+    scheduledType === 'rest' && profile?.pplStartDate
       ? suggestOffDayWorkout(toISODate(new Date()), profile.pplStartDate, profile.workoutDays)
       : null;
 
@@ -31,7 +42,7 @@ export function DashboardPage() {
       <div className="flex-1 overflow-y-auto scrollbar-hide px-4 pb-8 space-y-4">
         <StatsRibbon />
         <DashboardTrackers />
-        <DailyWorkoutCard todayType={todayType} offDaySuggestion={offDaySuggestion} />
+        <DailyWorkoutCard todayType={todayType} offDaySuggestion={offDaySuggestion} smartReason={smartType?.reason} />
         <QuickLogWeight />
         <WithingsWidget />
         <Card>

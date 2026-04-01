@@ -88,6 +88,9 @@ function apiDevPlugin(): Plugin {
 }
 
 export default defineConfig({
+  define: {
+    __BUILD_DATE__: JSON.stringify(new Date().toISOString()),
+  },
   server: {
     watch: {
       // Ignore Google Drive sync metadata to prevent spurious HMR refreshes

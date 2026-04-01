@@ -364,7 +364,10 @@ export function ProfilePage() {
         {/* App Info */}
         <div className="text-center pt-4">
           <p className="text-xs text-text-muted">
-            ShuktiFit v0.6.0 · Phase 6
+            ShuktiFit v0.7.0
+          </p>
+          <p className="text-[10px] text-text-muted mt-0.5">
+            Built {new Date(__BUILD_DATE__).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
           </p>
         </div>
       </div>

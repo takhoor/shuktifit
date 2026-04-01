@@ -12,9 +12,10 @@ import type { OffDaySuggestion } from '../../services/pplScheduler';
 interface DailyWorkoutCardProps {
   todayType: PPLType | 'rest';
   offDaySuggestion?: OffDaySuggestion | null;
+  smartReason?: string | null;
 }
 
-export function DailyWorkoutCard({ todayType, offDaySuggestion }: DailyWorkoutCardProps) {
+export function DailyWorkoutCard({ todayType, offDaySuggestion, smartReason }: DailyWorkoutCardProps) {
   const navigate = useNavigate();
   const [aiOpen, setAiOpen] = useState(false);
   const [templatesOpen, setTemplatesOpen] = useState(false);
@@ -85,9 +86,15 @@ export function DailyWorkoutCard({ todayType, offDaySuggestion }: DailyWorkoutCa
           <h2 className="text-xl font-bold text-text-primary">
             {PPL_LABELS[todayType]}
           </h2>
-          <p className="text-sm text-text-secondary mb-4">
+          <p className="text-sm text-text-secondary">
             {PPL_MUSCLE_FOCUS[todayType]}
           </p>
+          {smartReason && (
+            <p className="text-xs text-text-muted mt-1 mb-3 italic">
+              {smartReason}
+            </p>
+          )}
+          {!smartReason && <div className="mb-4" />}
           <div className="flex gap-3">
             <Button
               className="flex-1"
