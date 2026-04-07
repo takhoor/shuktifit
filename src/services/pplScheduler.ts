@@ -164,8 +164,10 @@ export async function getSmartNextType(): Promise<{ type: PPLType; reason: strin
   const recentWorkouts = await db.workouts
     .where('status')
     .equals('completed')
-    .reverse()
-    .sortBy('date');
+    .toArray();
+
+  // Sort by date descending so we find the most recent completion first
+  recentWorkouts.sort((a, b) => b.date.localeCompare(a.date));
 
   // Find the most recent completion date for each type
   const lastDone: Record<PPLType, string | null> = { push: null, pull: null, legs: null };
