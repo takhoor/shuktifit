@@ -34,10 +34,11 @@ export type MuscleGroup = typeof MUSCLE_GROUPS[number];
 export const PPL_TYPES = ['push', 'pull', 'legs'] as const;
 export type PPLType = typeof PPL_TYPES[number];
 
-export const PPL_COLORS: Record<PPLType | 'rest', string> = {
+export const PPL_COLORS: Record<PPLType | 'rest' | 'full-body', string> = {
   push: '#FF6B6B',
   pull: '#4DABF7',
   legs: '#51CF66',
+  'full-body': '#E599F7',
   rest: '#868E96',
 };
 

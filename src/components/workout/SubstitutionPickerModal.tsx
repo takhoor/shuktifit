@@ -5,6 +5,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db';
 import { getExerciseImageUrl } from '../../utils/imageUrl';
 import { USER_EQUIPMENT_FILTER } from '../../utils/constants';
+import { ExerciseInfoModal } from './ExerciseInfoModal';
 import type { Exercise } from '../../types/database';
 
 interface SubstitutionPickerModalProps {
@@ -28,6 +29,7 @@ export function SubstitutionPickerModal({
   bodyweightOnly = false,
 }: SubstitutionPickerModalProps) {
   const [search, setSearch] = useState('');
+  const [previewExercise, setPreviewExercise] = useState<Exercise | null>(null);
 
   const exercises = useLiveQuery(() => db.exercises.toArray(), []);
 
@@ -67,60 +69,72 @@ export function SubstitutionPickerModal({
       .slice(0, 50);
   }, [exercises, search, originalExercise, equipmentFilter, resolvedMuscles]);
 
-  const handleSelect = (exercise: Exercise) => {
-    onSelect(exercise);
+  const handleConfirmSwap = () => {
+    if (!previewExercise) return;
+    onSelect(previewExercise);
+    setPreviewExercise(null);
     setSearch('');
   };
 
   if (!originalExercise) return null;
 
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title={`Substitute for ${originalExercise.exerciseName}`}
-    >
-      <div className="px-4 py-3 space-y-3">
-        <p className="text-xs text-text-secondary">
-          Showing exercises targeting {resolvedMuscles.join(', ')} with your available equipment.
-        </p>
-        <Input
-          placeholder="Search exercises..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          autoFocus
-        />
-      </div>
-      <div className="pb-8">
-        {filtered.length === 0 ? (
-          <p className="text-center text-text-muted py-8 text-sm">
-            No matching exercises found
+    <>
+      <Modal
+        open={open}
+        onClose={onClose}
+        title={`Substitute for ${originalExercise.exerciseName}`}
+      >
+        <div className="px-4 py-3 space-y-3">
+          <p className="text-xs text-text-secondary">
+            Tap any exercise to preview it. Showing exercises targeting {resolvedMuscles.join(', ')} with your available equipment.
           </p>
-        ) : (
-          filtered.map((exercise) => (
-            <SubPickerItem
-              key={exercise.id}
-              exercise={exercise}
-              onSelect={() => handleSelect(exercise)}
-            />
-          ))
-        )}
-      </div>
-    </Modal>
+          <Input
+            placeholder="Search exercises..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            autoFocus
+          />
+        </div>
+        <div className="pb-8">
+          {filtered.length === 0 ? (
+            <p className="text-center text-text-muted py-8 text-sm">
+              No matching exercises found
+            </p>
+          ) : (
+            filtered.map((exercise) => (
+              <SubPickerItem
+                key={exercise.id}
+                exercise={exercise}
+                onPreview={() => setPreviewExercise(exercise)}
+              />
+            ))
+          )}
+        </div>
+      </Modal>
+
+      <ExerciseInfoModal
+        open={previewExercise !== null}
+        onClose={() => setPreviewExercise(null)}
+        exercise={previewExercise}
+        actionLabel="Use this exercise"
+        onAction={handleConfirmSwap}
+      />
+    </>
   );
 }
 
 function SubPickerItem({
   exercise,
-  onSelect,
+  onPreview,
 }: {
   exercise: Exercise;
-  onSelect: () => void;
+  onPreview: () => void;
 }) {
   const [imgErr, setImgErr] = useState(false);
   return (
     <button
-      onClick={onSelect}
+      onClick={onPreview}
       className="w-full flex items-center gap-3 px-4 py-3 active:bg-bg-elevated transition-colors text-left"
     >
       <div className="w-10 h-10 rounded-lg bg-bg-elevated flex items-center justify-center overflow-hidden shrink-0">
@@ -145,10 +159,9 @@ function SubPickerItem({
           {exercise.equipment ? ` · ${exercise.equipment}` : ''}
         </p>
       </div>
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-accent shrink-0">
-        <polyline points="8 7 3 12 8 17" />
-        <polyline points="16 7 21 12 16 17" />
-      </svg>
+      <span className="text-[10px] text-text-muted shrink-0 uppercase tracking-wide">
+        Preview
+      </span>
     </button>
   );
 }

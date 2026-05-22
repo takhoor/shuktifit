@@ -26,7 +26,7 @@ import { PPL_LABELS, PPL_MUSCLE_FOCUS, PPL_COLORS } from '../../utils/constants'
 export function WorkoutBuilderPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const workoutType = (searchParams.get('type') as PPLType) || 'push';
+  const workoutType = (searchParams.get('type') as PPLType | 'full-body' | 'custom') || 'push';
   const aiWorkoutId = searchParams.get('ai');
 
   const editWorkoutId = searchParams.get('edit');
@@ -146,14 +146,14 @@ export function WorkoutBuilderPage() {
           <div className="flex items-center gap-3">
             <div
               className="w-3 h-3 rounded-full"
-              style={{ backgroundColor: PPL_COLORS[workoutType as PPLType] ?? PPL_COLORS.push }}
+              style={{ backgroundColor: PPL_COLORS[workoutType as PPLType | 'full-body'] ?? PPL_COLORS.push }}
             />
             <div>
               <h2 className="font-bold text-text-primary">
-                {PPL_LABELS[workoutType as PPLType] ?? 'Custom Workout'}
+                {workoutType === 'full-body' ? 'Full Body' : (PPL_LABELS[workoutType as PPLType] ?? 'Custom Workout')}
               </h2>
               <p className="text-xs text-text-secondary">
-                {PPL_MUSCLE_FOCUS[workoutType as PPLType] ?? ''}
+                {workoutType === 'full-body' ? 'All major muscle groups' : (PPL_MUSCLE_FOCUS[workoutType as PPLType] ?? '')}
               </p>
             </div>
             {isAI && (

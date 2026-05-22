@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Modal } from '../ui/Modal';
@@ -9,8 +9,7 @@ import { db } from '../../db';
 import { createWorkout, deleteWorkout, updateWorkoutDate } from '../../services/workoutEngine';
 import { formatDate, toISODate } from '../../utils/dateUtils';
 import { PPL_COLORS } from '../../utils/constants';
-import { useUserProfile } from '../../hooks/useUserProfile';
-import { suggestOffDayWorkout } from '../../services/pplScheduler';
+import { LastWorkoutSummary } from '../dashboard/LastWorkoutSummary';
 import type { PPLType } from '../../utils/constants';
 import type { Workout } from '../../types/database';
 
@@ -25,18 +24,12 @@ interface CalendarDayModalProps {
 
 export function CalendarDayModal({ open, onClose, date, pplType, movingWorkout, onClearMoving }: CalendarDayModalProps) {
   const navigate = useNavigate();
-  const profile = useUserProfile();
   const [deleteTarget, setDeleteTarget] = useState<number | null>(null);
 
   const workouts = useLiveQuery(
     () => db.workouts.where('date').equals(date).toArray(),
     [date],
   );
-
-  const suggestion = useMemo(() => {
-    if (pplType !== 'rest' || !profile?.pplStartDate) return null;
-    return suggestOffDayWorkout(date, profile.pplStartDate, profile.workoutDays);
-  }, [pplType, date, profile?.pplStartDate, profile?.workoutDays]);
 
   const handleCreateWorkout = async (type: PPLType | 'custom') => {
     const id = await createWorkout(type);
@@ -84,27 +77,8 @@ export function CalendarDayModal({ open, onClose, date, pplType, movingWorkout, 
             )}
           </div>
 
-          {/* Smart suggestion for rest days */}
-          {isRest && suggestion && (
-            <div className="p-3 rounded-xl bg-bg-elevated border border-border">
-              <p className="text-xs text-text-muted mb-1">Suggested workout</p>
-              <div className="flex items-center gap-2 mb-1.5">
-                <div
-                  className="w-2.5 h-2.5 rounded-full"
-                  style={{ backgroundColor: PPL_COLORS[suggestion.type] }}
-                />
-                <span className="text-sm font-semibold text-text-primary capitalize">
-                  {suggestion.type}
-                </span>
-              </div>
-              <p className="text-xs text-text-secondary mb-3">
-                {suggestion.reason}
-              </p>
-              <Button size="sm" onClick={() => handleCreateWorkout(suggestion.type)}>
-                Start {suggestion.type}
-              </Button>
-            </div>
-          )}
+          {/* Last workout summary */}
+          <LastWorkoutSummary />
 
           {/* Moving workout banner */}
           {movingWorkout && (
@@ -194,7 +168,7 @@ function WorkoutRow({
   onOpen: () => void;
   onDelete: () => void;
 }) {
-  const color = PPL_COLORS[workout.type as PPLType] ?? '#888';
+  const color = PPL_COLORS[workout.type as PPLType | 'full-body'] ?? '#888';
   const statusLabel =
     workout.status === 'completed' ? 'Done' :
     workout.status === 'in_progress' ? 'In Progress' :

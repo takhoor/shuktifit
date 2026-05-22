@@ -12,7 +12,7 @@ import { DEFAULT_REST_SECONDS } from '../utils/constants';
 import type { PPLType } from '../utils/constants';
 
 export async function createWorkout(
-  type: PPLType | 'custom',
+  type: PPLType | 'full-body' | 'custom',
   name?: string,
 ): Promise<number> {
   const id = await db.workouts.add({
@@ -339,6 +339,106 @@ export async function completeWorkout(
   };
 }
 
+/**
+ * Reverts a just-completed workout back to in_progress so the user can keep editing.
+ * Deletes any exerciseHistory rows recorded for this workout's date and clears
+ * completion metadata on the workout. Set PR flags are left as-is — they'll be
+ * recomputed when the user completes the workout again.
+ */
+export async function undoCompleteWorkout(workoutId: number): Promise<void> {
+  const workout = await db.workouts.get(workoutId);
+  if (!workout || workout.status !== 'completed') return;
+
+  const exercises = await db.workoutExercises
+    .where('workoutId')
+    .equals(workoutId)
+    .toArray();
+
+  for (const ex of exercises) {
+    const historyEntry = await db.exerciseHistory
+      .where('[exerciseId+date]')
+      .equals([ex.exerciseId, workout.date])
+      .first();
+    if (historyEntry) {
+      await db.exerciseHistory.delete(historyEntry.id!);
+    }
+  }
+
+  await db.workouts.update(workoutId, {
+    status: 'in_progress',
+    completedAt: undefined,
+    totalVolume: undefined,
+    durationMinutes: undefined,
+  });
+}
+
+/**
+ * Inserts a new exercise at the given order position, shifting existing
+ * exercises with order >= position by +1.
+ * If sessionOnly is true, marks the exercise as a one-off (excluded from
+ * cloneWorkout when the user redoes this workout later).
+ */
+export async function insertExerciseAtPosition(
+  workoutId: number,
+  position: number,
+  exerciseId: string,
+  exerciseName: string,
+  sessionOnly: boolean,
+  targetSets: number = 3,
+  targetReps: number = 10,
+  restSeconds: number = DEFAULT_REST_SECONDS,
+): Promise<number> {
+  const load = await getProgressiveLoad(exerciseId, targetReps);
+
+  const newId = await db.transaction(
+    'rw',
+    [db.workoutExercises, db.exerciseSets],
+    async () => {
+      const existing = await db.workoutExercises
+        .where('workoutId')
+        .equals(workoutId)
+        .toArray();
+
+      // Shift orders for everything at or after the insertion point
+      for (const ex of existing) {
+        if (ex.order >= position) {
+          await db.workoutExercises.update(ex.id!, { order: ex.order + 1 });
+        }
+      }
+
+      const id = await db.workoutExercises.add({
+        workoutId,
+        exerciseId,
+        exerciseName,
+        order: position,
+        supersetGroup: null,
+        targetSets,
+        targetReps,
+        suggestedWeight: load.weight,
+        restSeconds,
+        isCompleted: false,
+        addedMidSession: sessionOnly || undefined,
+      } as WorkoutExercise);
+
+      for (let i = 1; i <= targetSets; i++) {
+        await db.exerciseSets.add({
+          workoutExerciseId: id as number,
+          setNumber: i,
+          targetReps,
+          targetWeight: load.weight,
+          setType: 'working',
+          isCompleted: false,
+          isPR: false,
+        } as ExerciseSet);
+      }
+
+      return id as number;
+    },
+  );
+
+  return newId;
+}
+
 export async function getLastPerformance(
   exerciseId: string,
 ): Promise<ExerciseHistory | undefined> {
@@ -536,10 +636,12 @@ export async function cloneWorkout(workoutId: number): Promise<number> {
   const workout = await db.workouts.get(workoutId);
   if (!workout) throw new Error('Workout not found');
 
-  const exercises = await db.workoutExercises
+  const allExercises = await db.workoutExercises
     .where('workoutId')
     .equals(workoutId)
     .sortBy('order');
+  // Mid-session one-offs don't carry over to redo
+  const exercises = allExercises.filter((e) => !e.addedMidSession);
 
   const newWorkoutId = await db.workouts.add({
     date: today(),

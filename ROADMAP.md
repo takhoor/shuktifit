@@ -2,7 +2,7 @@
 
 > AI-Powered Personal Fitness Tracker PWA (originally spec'd as "FitAI")
 > Original spec: `FitAI-Requirements-Spec_2.md` (v1.0, Feb 6 2026)
-> Last updated: 2026-03-19
+> Last updated: 2026-04-09
 
 ---
 
@@ -14,7 +14,7 @@
 | Framework | React 19 + TypeScript 5.9 |
 | Build | Vite 7.3 |
 | Styling | Tailwind CSS 4 (dark theme, navy/orange) |
-| Local DB | Dexie (IndexedDB) — 16 tables |
+| Local DB | Dexie (IndexedDB) — 17 tables |
 | State | Zustand (workout session, filters) |
 | Charts | Recharts |
 | AI | Claude Sonnet 4.5 via Vercel serverless (8 endpoints) |
@@ -224,6 +224,8 @@ The original spec defines 5 phases. Phases 1-3 are complete. Phase 4 is partial.
 - [x] **Exercise stopwatch** — count-up timer for static/isometric exercises (planks, wall sits); dings when target time is reached; appears as "Timer" button on static exercises
 - [x] **Exercise info modal** — tap exercise name or image during workout player or workout detail page to see animated start/end position demo, equipment/muscle pills, and step-by-step instructions
 - [x] **Auto-reset stale workouts** — completing any workout resets all other `in_progress` workouts back to `planned` status
+- [x] **Last-workout summary widget** — replaces the smart PPL suggestion on dashboard + calendar rest-day modal; shows "days since last push/pull/legs"; full-body workouts (now a first-class `Workout.type`) reset all three counters
+- [x] **Feedback Inbox** — local Dexie-backed bug/enhancement/note capture (table `feedback`, schema v17); FAB on every page → modal with category, title, description, optional screenshot from gallery; Profile → Feedback inbox to review, copy markdown, download PNGs, or export everything (markdown summary + sequential PNG downloads) for sharing with Claude Code
 
 ---
 
@@ -413,3 +415,4 @@ Quick reference of what the original spec asks for that isn't built yet:
 | 2026-03-12 | Fixed Withings sync error messages (B6 — shows actual error instead of generic message). Fixed Modal close button (B7 — 44px touch target, z-index stacking, shrink-0 header). Fixed TemplateBrowser flex layout inside modal. Added workout URL parsing: `POST /api/parse-workout-url` endpoint fetches page content, Claude extracts structured workout, integrates via existing `create_workout` confirmation flow in chat. |
 | 2026-03-19 | Removed Withings access code gate (API + UI prompt). Per-exercise rest duration editing in workout player. Background-safe rest timer using absolute timestamps + visibilitychange listener. Web Audio ding sound on rest completion. Exercise stopwatch for static/isometric exercises with target-time ding. Exercise info modal (animated demo + instructions) on tap in workout player. Auto-reset stale in_progress workouts on completion. |
 | 2026-03-25 | Extended exercise info modal to workout detail page — tap any exercise name to see animated demo and instructions. Pushed all pending commits to remote. |
+| 2026-04-09 | Removed PPL suggestion widget from dashboard + calendar rest-day modal (the "do a pull day" override that confused users). Replaced with `LastWorkoutSummary` showing days-since-last for push/pull/legs. Added `'full-body'` as a first-class `Workout.type` (Dexie v17, no data migration); `templateEngine` no longer downgrades full-body templates to `'custom'`; full-body completions reset all three PPL counters. Removed dead `suggestOffDayWorkout` and `getSmartNextType`. Added Feedback Inbox: new `feedback` Dexie table, `FeedbackFAB` (small flag button above ChatFAB on every page), `FeedbackModal` (category + title + description + screenshot picker via `<input accept="image/*">`), `FeedbackInbox` modal in Profile (list, copy markdown, download PNG, delete, export-all triggers markdown + sequential PNG downloads). |

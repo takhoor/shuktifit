@@ -9,7 +9,13 @@
       "Bash(node scripts/generate-icons.cjs:*)",
       "Bash(npx vercel:*)",
       "Bash(gh auth status:*)",
-      "Bash(git config:*)"
+      "Bash(git config:*)",
+      "Bash(git commit:*)",
+      "Bash(git add:*)",
+      "Bash(git push:*)",
+      "Bash(gh api:*)",
+      "Bash(npm run *)",
+      "Bash(grep -qE \"ready in|Local:|error\" \"C:\\\\\\\\Users\\\\\\\\Agnee\\\\\\\\AppData\\\\\\\\Local\\\\\\\\Temp\\\\\\\\claude\\\\\\\\d--Google-Drive-Health-ShuktiFit\\\\\\\\6f0a4b65-c7e8-4af1-8a0b-5fe61b8815da\\\\\\\\tasks\\\\\\\\bjhb2mzx2.output\")"
     ]
   }
 }

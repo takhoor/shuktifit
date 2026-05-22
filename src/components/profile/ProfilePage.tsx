@@ -16,6 +16,9 @@ import {
   disconnectWithings,
 } from '../../services/withings';
 import { exportAllData, downloadExport, importData } from '../../services/dataPortability';
+import { FeedbackInbox } from '../feedback/FeedbackInbox';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { db } from '../../db';
 
 export function ProfilePage() {
   const profile = useUserProfile();
@@ -26,7 +29,9 @@ export function ProfilePage() {
   const [callbackHandled, setCallbackHandled] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const feedbackCount = useLiveQuery(() => db.feedback.count(), [], 0);
 
   // Handle Withings OAuth callback params
   useEffect(() => {
@@ -360,6 +365,24 @@ export function ProfilePage() {
             </p>
           </div>
         </Card>
+
+        {/* Feedback Inbox */}
+        <Card>
+          <h3 className="text-sm font-semibold text-text-secondary mb-3">
+            Feedback
+          </h3>
+          <p className="text-xs text-text-muted mb-3">
+            {feedbackCount} item{feedbackCount === 1 ? '' : 's'} saved locally. Use the flag button while using the app to add new ones.
+          </p>
+          <button
+            onClick={() => setFeedbackOpen(true)}
+            className="w-full py-2.5 rounded-lg text-xs font-medium bg-bg-elevated text-text-primary border border-border"
+          >
+            Open Inbox
+          </button>
+        </Card>
+
+        <FeedbackInbox open={feedbackOpen} onClose={() => setFeedbackOpen(false)} />
 
         {/* App Info */}
         <div className="text-center pt-4">

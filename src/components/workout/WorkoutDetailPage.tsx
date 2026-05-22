@@ -19,10 +19,12 @@ import {
   recalculateWorkoutStats,
   removeExerciseFromWorkout,
   cloneWorkout,
+  addExerciseToWorkout,
 } from '../../services/workoutEngine';
 import { toast } from '../ui/Toast';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { ExerciseInfoModal } from './ExerciseInfoModal';
+import { ExercisePickerModal } from './ExercisePickerModal';
 import { db } from '../../db';
 import type { PPLType } from '../../utils/constants';
 import type { Exercise, ExerciseSet } from '../../types/database';
@@ -41,6 +43,7 @@ export function WorkoutDetailPage() {
   const [removeExId, setRemoveExId] = useState<number | null>(null);
   const [removeExName, setRemoveExName] = useState('');
   const [infoExercise, setInfoExercise] = useState<Exercise | null>(null);
+  const [addPickerOpen, setAddPickerOpen] = useState(false);
 
   const openExerciseInfo = async (exerciseId: string) => {
     const ex = await db.exercises.get(exerciseId);
@@ -59,7 +62,8 @@ export function WorkoutDetailPage() {
   }
 
   const pplType = workout.type as PPLType;
-  const color = PPL_COLORS[pplType] ?? PPL_COLORS.push;
+  const color = PPL_COLORS[workout.type as PPLType | 'full-body'] ?? PPL_COLORS.push;
+  const typeLabel = workout.type === 'full-body' ? 'Full Body' : (PPL_LABELS[pplType] ?? workout.type);
 
   const handleResume = async () => {
     if (!workoutId) return;
@@ -108,6 +112,13 @@ export function WorkoutDetailPage() {
     toast('Exercise removed', 'success');
   };
 
+  const handleAddExercise = async (exercise: Exercise) => {
+    if (!workoutId) return;
+    await addExerciseToWorkout(workoutId, exercise.id, exercise.name);
+    setAddPickerOpen(false);
+    toast(`Added ${exercise.name}`, 'success');
+  };
+
   const setsMap = allSets as Record<number, ExerciseSet[]>;
 
   return (
@@ -125,7 +136,7 @@ export function WorkoutDetailPage() {
             </div>
             <div className="flex-1">
               <h2 className="font-bold text-text-primary capitalize">
-                {PPL_LABELS[pplType] ?? workout.type}
+                {typeLabel}
               </h2>
               <p className="text-xs text-text-secondary">
                 {formatDate(workout.date)}
@@ -240,7 +251,24 @@ export function WorkoutDetailPage() {
             );
           })}
         </div>
+
+        {isEditing && (
+          <Button
+            variant="secondary"
+            className="w-full mt-4"
+            onClick={() => setAddPickerOpen(true)}
+          >
+            + Add Exercise
+          </Button>
+        )}
       </div>
+
+      <ExercisePickerModal
+        open={addPickerOpen}
+        onClose={() => setAddPickerOpen(false)}
+        onSelect={handleAddExercise}
+        excludeIds={exercises.map((e) => e.exerciseId)}
+      />
 
       <ExerciseInfoModal
         open={infoExercise !== null}

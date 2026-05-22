@@ -14,9 +14,10 @@ interface WorkoutSummaryProps {
   };
   workoutType: string;
   onDone: () => void;
+  onUndo?: () => void;
 }
 
-export function WorkoutSummary({ summary, workoutType, onDone }: WorkoutSummaryProps) {
+export function WorkoutSummary({ summary, workoutType, onDone, onUndo }: WorkoutSummaryProps) {
   const pplType = workoutType as PPLType;
   const color = PPL_COLORS[pplType] ?? PPL_COLORS.push;
 
@@ -51,6 +52,14 @@ export function WorkoutSummary({ summary, workoutType, onDone }: WorkoutSummaryP
       <Button size="lg" className="w-full max-w-sm" onClick={onDone}>
         Done
       </Button>
+      {onUndo && (
+        <button
+          onClick={onUndo}
+          className="mt-3 text-sm text-text-muted active:text-text-secondary py-2"
+        >
+          Undo — back to workout
+        </button>
+      )}
     </div>
   );
 }

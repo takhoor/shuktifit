@@ -45,7 +45,7 @@ export function TemplateDetailModal({ templateId, open, onClose }: TemplateDetai
     try {
       const workoutId = await createWorkoutFromTemplate(templateId);
       onClose();
-      navigate(`/workouts/new?type=${template?.type === 'full-body' ? 'custom' : template?.type}&edit=${workoutId}`);
+      navigate(`/workouts/new?type=${template?.type}&edit=${workoutId}`);
     } catch (err) {
       console.error('Failed to create workout from template:', err);
     } finally {

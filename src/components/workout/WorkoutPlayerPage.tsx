@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useWorkout, useWorkoutExercises, useExerciseSets } from '../../hooks/useWorkouts';
 import { useWorkoutStore } from '../../stores/useWorkoutStore';
-import { logSet, completeWorkout, addSetToExercise, getLastPerformance, removeExerciseFromWorkout, swapExerciseInWorkout, deleteSet, updateCompletedSet, updateExerciseTargets } from '../../services/workoutEngine';
+import { logSet, completeWorkout, addSetToExercise, getLastPerformance, removeExerciseFromWorkout, swapExerciseInWorkout, deleteSet, updateCompletedSet, updateExerciseTargets, undoCompleteWorkout, insertExerciseAtPosition } from '../../services/workoutEngine';
+import { ExercisePickerModal } from './ExercisePickerModal';
 import { db } from '../../db';
 import { SetRow } from './SetRow';
 import { RestTimer } from './RestTimer';
@@ -46,6 +47,9 @@ export function WorkoutPlayerPage() {
   const [quitOpen, setQuitOpen] = useState(false);
   const [removeOpen, setRemoveOpen] = useState(false);
   const [removeLastSetOpen, setRemoveLastSetOpen] = useState(false);
+  const [confirmFinishOpen, setConfirmFinishOpen] = useState(false);
+  const [addPickerOpen, setAddPickerOpen] = useState(false);
+  const [pendingAddExercise, setPendingAddExercise] = useState<Exercise | null>(null);
   const [imgErr, setImgErr] = useState(false);
   const [showSubPicker, setShowSubPicker] = useState(false);
   const [subOriginal, setSubOriginal] = useState<{
@@ -104,6 +108,13 @@ export function WorkoutPlayerPage() {
         onDone={() => {
           finishSession();
           navigate('/workouts');
+        }}
+        onUndo={async () => {
+          if (!workoutId) return;
+          await undoCompleteWorkout(workoutId);
+          setSummary(null);
+          setShowSummary(false);
+          toast('Workout reopened', 'info');
         }}
       />
     );
@@ -194,6 +205,30 @@ export function WorkoutPlayerPage() {
     toast(`Swapped to ${newExercise.name}`, 'success');
   };
 
+  const handleAddExercisePicked = (exercise: Exercise) => {
+    setAddPickerOpen(false);
+    setPendingAddExercise(exercise);
+  };
+
+  const handleInsertExercise = async (sessionOnly: boolean) => {
+    if (!workoutId || !pendingAddExercise || !currentExercise) return;
+    const position = currentExercise.order + 1;
+    await insertExerciseAtPosition(
+      workoutId,
+      position,
+      pendingAddExercise.id,
+      pendingAddExercise.name,
+      sessionOnly,
+    );
+    setPendingAddExercise(null);
+    toast(
+      sessionOnly
+        ? `Added ${pendingAddExercise.name} (this session only)`
+        : `Added ${pendingAddExercise.name}`,
+      'success',
+    );
+  };
+
   const handleRemove = async () => {
     if (!currentExercise?.id || !exercises) return;
     if (exercises.length <= 1) {
@@ -230,14 +265,14 @@ export function WorkoutPlayerPage() {
         </button>
         <div className="text-center">
           <h1 className="text-sm font-bold text-text-primary capitalize">
-            {workout.type} Day
+            {workout.type === 'full-body' ? 'Full Body' : `${workout.type} Day`}
           </h1>
           <p className="text-xs text-text-secondary">
             {currentIndex + 1} / {exercises.length}
           </p>
         </div>
         <button
-          onClick={handleFinishWorkout}
+          onClick={() => setConfirmFinishOpen(true)}
           className="text-sm font-semibold text-accent active:text-accent-hover"
         >
           Finish
@@ -334,8 +369,19 @@ export function WorkoutPlayerPage() {
             </div>
             <div className="flex gap-1 ml-2 shrink-0">
               <button
+                onClick={() => setAddPickerOpen(true)}
+                className="p-2 rounded-lg text-text-muted active:text-accent active:bg-bg-elevated"
+                title="Add exercise after this one"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+              </button>
+              <button
                 onClick={handleOpenSwap}
                 className="p-2 rounded-lg text-text-muted active:text-accent active:bg-bg-elevated"
+                title="Swap exercise"
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="8 7 3 12 8 17" />
@@ -346,6 +392,7 @@ export function WorkoutPlayerPage() {
                 <button
                   onClick={() => setRemoveOpen(true)}
                   className="p-2 rounded-lg text-text-muted active:text-red-400 active:bg-bg-elevated"
+                  title="Remove exercise"
                 >
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <polyline points="3 6 5 6 21 6" />
@@ -415,7 +462,7 @@ export function WorkoutPlayerPage() {
             </button>
           ) : (
             <button
-              onClick={handleFinishWorkout}
+              onClick={() => setConfirmFinishOpen(true)}
               className={`flex-1 py-3 rounded-xl font-bold text-sm ${
                 allExercisesDone
                   ? 'bg-accent text-white active:bg-accent-hover'
@@ -482,6 +529,64 @@ export function WorkoutPlayerPage() {
         }}
         onCancel={() => setRemoveLastSetOpen(false)}
       />
+
+      <ConfirmDialog
+        open={confirmFinishOpen}
+        title="Finish workout?"
+        message={
+          allExercisesDone
+            ? 'Mark this workout as complete?'
+            : "Some exercises aren't finished yet. Complete the workout anyway?"
+        }
+        confirmLabel="Finish"
+        cancelLabel="Keep going"
+        onConfirm={() => {
+          setConfirmFinishOpen(false);
+          handleFinishWorkout();
+        }}
+        onCancel={() => setConfirmFinishOpen(false)}
+      />
+
+      <ExercisePickerModal
+        open={addPickerOpen}
+        onClose={() => setAddPickerOpen(false)}
+        onSelect={handleAddExercisePicked}
+        excludeIds={exercises?.map((e) => e.exerciseId) ?? []}
+      />
+
+      {pendingAddExercise && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-6">
+          <div className="absolute inset-0 bg-black/60" onClick={() => setPendingAddExercise(null)} />
+          <div className="relative bg-bg-card rounded-2xl border border-border p-6 w-full max-w-sm">
+            <h3 className="text-lg font-bold text-text-primary mb-1">
+              Add {pendingAddExercise.name}?
+            </h3>
+            <p className="text-sm text-text-secondary mb-5">
+              It'll be inserted after the current exercise. Save it just for today, or to this workout permanently?
+            </p>
+            <div className="space-y-2">
+              <button
+                onClick={() => handleInsertExercise(true)}
+                className="w-full py-3 rounded-xl bg-bg-elevated text-text-primary text-sm font-semibold active:bg-bg-card"
+              >
+                This session only
+              </button>
+              <button
+                onClick={() => handleInsertExercise(false)}
+                className="w-full py-3 rounded-xl bg-accent text-white text-sm font-semibold active:bg-accent-hover"
+              >
+                Save to this workout
+              </button>
+              <button
+                onClick={() => setPendingAddExercise(null)}
+                className="w-full py-2 text-sm text-text-muted active:text-text-secondary"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -14,11 +14,9 @@ export async function createWorkoutFromTemplate(
     .equals(templateId)
     .sortBy('order');
 
-  const workoutType = template.type === 'full-body' ? 'custom' : template.type;
-
   const workoutId = await db.workouts.add({
     date: today(),
-    type: workoutType,
+    type: template.type,
     status: 'planned',
     name: template.name,
     aiGenerated: false,
@@ -67,7 +65,7 @@ export async function saveWorkoutAsTemplate(
   const templateId = await db.workoutTemplates.add({
     name,
     description,
-    type: workout.type === 'custom' ? 'full-body' : workout.type,
+    type: workout.type === 'custom' ? 'full-body' : (workout.type as 'push' | 'pull' | 'legs' | 'full-body'),
     duration,
     equipmentProfile: 'full',
     tags: [workout.type, 'user-created'],

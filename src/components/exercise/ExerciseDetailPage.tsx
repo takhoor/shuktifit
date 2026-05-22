@@ -111,7 +111,7 @@ export function ExerciseDetailPage() {
         </div>
 
         {/* Instructions */}
-        {exercise.instructions.length > 0 && (
+        {exercise.instructions.length > 0 ? (
           <Card>
             <h3 className="text-sm font-semibold text-text-secondary mb-3">
               Instructions
@@ -126,6 +126,24 @@ export function ExerciseDetailPage() {
                 </li>
               ))}
             </ol>
+          </Card>
+        ) : (
+          <Card className="text-center">
+            <p className="text-sm text-text-secondary mb-3">
+              No instructions for this exercise yet.
+            </p>
+            <a
+              href={`https://www.google.com/search?q=${encodeURIComponent('how to do ' + exercise.name + ' exercise')}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 text-sm font-semibold text-accent active:text-accent-hover"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              Search Google for "{exercise.name}"
+            </a>
           </Card>
         )}
       </div>

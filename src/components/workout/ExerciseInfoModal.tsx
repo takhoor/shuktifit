@@ -7,6 +7,8 @@ interface ExerciseInfoModalProps {
   open: boolean;
   onClose: () => void;
   exercise: Exercise | null;
+  actionLabel?: string;
+  onAction?: () => void;
 }
 
 /** Animating image that flips between start/end position frames */
@@ -44,8 +46,10 @@ function AnimatedExercise({ images, name }: { images: string[]; name: string }) 
   );
 }
 
-export function ExerciseInfoModal({ open, onClose, exercise }: ExerciseInfoModalProps) {
+export function ExerciseInfoModal({ open, onClose, exercise, actionLabel, onAction }: ExerciseInfoModalProps) {
   if (!exercise) return null;
+
+  const googleSearchUrl = `https://www.google.com/search?q=${encodeURIComponent('how to do ' + exercise.name + ' exercise')}`;
 
   return (
     <Modal open={open} onClose={onClose} title={exercise.name}>
@@ -78,7 +82,7 @@ export function ExerciseInfoModal({ open, onClose, exercise }: ExerciseInfoModal
         </div>
 
         {/* Instructions */}
-        {exercise.instructions.length > 0 && (
+        {exercise.instructions.length > 0 ? (
           <div>
             <h3 className="text-sm font-semibold text-text-secondary mb-2">
               How to perform
@@ -94,6 +98,33 @@ export function ExerciseInfoModal({ open, onClose, exercise }: ExerciseInfoModal
               ))}
             </ol>
           </div>
+        ) : (
+          <div className="rounded-xl bg-bg-elevated p-4 text-center">
+            <p className="text-sm text-text-secondary mb-3">
+              No instructions for this exercise yet.
+            </p>
+            <a
+              href={googleSearchUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 text-sm font-semibold text-accent active:text-accent-hover"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              Search Google for "{exercise.name}"
+            </a>
+          </div>
+        )}
+
+        {actionLabel && onAction && (
+          <button
+            onClick={onAction}
+            className="w-full mt-5 py-3 rounded-xl bg-accent text-white text-sm font-semibold active:bg-accent-hover"
+          >
+            {actionLabel}
+          </button>
         )}
       </div>
     </Modal>

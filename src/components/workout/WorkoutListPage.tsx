@@ -101,7 +101,7 @@ export function WorkoutListPage() {
 
 function WorkoutRow({ workout, onDelete }: { workout: Workout; onDelete: (w: Workout) => void }) {
   const pplType = workout.type as PPLType;
-  const color = PPL_COLORS[pplType] ?? PPL_COLORS.push;
+  const color = PPL_COLORS[workout.type as PPLType | 'full-body'] ?? PPL_COLORS.push;
 
   const [translateX, setTranslateX] = useState(0);
   const [touching, setTouching] = useState(false);
@@ -179,7 +179,7 @@ function WorkoutRow({ workout, onDelete }: { workout: Workout; onDelete: (w: Wor
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <h3 className="text-sm font-semibold text-text-primary capitalize">
-                    {workout.name || PPL_LABELS[pplType] || workout.type}
+                    {workout.name || (workout.type === 'full-body' ? 'Full Body' : (PPL_LABELS[pplType] || workout.type))}
                   </h3>
                   {workout.aiGenerated && (
                     <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-900/30 text-purple-400">

@@ -61,7 +61,7 @@ export interface ExerciseExclusion {
 export interface Workout {
   id?: number;
   date: string;
-  type: 'push' | 'pull' | 'legs' | 'custom';
+  type: 'push' | 'pull' | 'legs' | 'full-body' | 'custom';
   status: 'planned' | 'in_progress' | 'completed' | 'skipped';
   name?: string;
   notes?: string;
@@ -88,6 +88,8 @@ export interface WorkoutExercise {
   restSeconds: number;
   isCompleted: boolean;
   notes?: string;
+  // True when added mid-workout as a one-off; excluded from cloneWorkout
+  addedMidSession?: boolean;
 }
 
 export interface ExerciseSet {
@@ -260,6 +262,22 @@ export interface CustomDataPoint {
   value: number;
   timestamp: string;
   notes?: string;
+}
+
+// --- Feedback Inbox ---
+
+export type FeedbackCategory = 'bug' | 'enhancement' | 'note';
+
+export interface FeedbackItem {
+  id?: number;
+  category: FeedbackCategory;
+  title: string;
+  description: string;
+  screenshotBlob?: Blob;
+  route: string;
+  userAgent: string;
+  appVersion: string;
+  createdAt: string;
 }
 
 // --- AI Chat ---

@@ -20,6 +20,7 @@ import type {
   CustomDataPoint,
   ChatConversation,
   ChatMessage,
+  FeedbackItem,
 } from '../types/database';
 
 export class ShuktiFitDB extends Dexie {
@@ -43,6 +44,7 @@ export class ShuktiFitDB extends Dexie {
   customDataPoints!: Table<CustomDataPoint>;
   chatConversations!: Table<ChatConversation>;
   chatMessages!: Table<ChatMessage>;
+  feedback!: Table<FeedbackItem>;
 
   constructor() {
     super('ShuktiFitDB');
@@ -115,6 +117,30 @@ export class ShuktiFitDB extends Dexie {
           series.dashboardOrder = 999;
         }
       });
+    });
+
+    this.version(4).stores({
+      userProfile: '++id',
+      exercises: 'id, name, *primaryMuscles, equipment, category, level',
+      customExercises: '++id, name, *primaryMuscles, equipment',
+      exerciseExclusions: '++id, &exerciseId',
+      workouts: '++id, date, type, status',
+      workoutExercises: '++id, workoutId, exerciseId, order',
+      exerciseSets: '++id, workoutExerciseId, setNumber',
+      exerciseHistory: '++id, exerciseId, date, [exerciseId+date]',
+      bodyMeasurements: '++id, date',
+      bodyAnalyses: '++id, date',
+      withingsData: '++id, type, date, [type+date]',
+      badges: '++id, type',
+      streaks: '++id, &type',
+      dailyTodos: '++id, date, [date+completed]',
+      workoutTemplates: '++id, type, duration, equipmentProfile, *tags, isUserCreated',
+      templateExercises: '++id, templateId, exerciseId, order',
+      customDataSeries: '++id, title, createdAt, trackerMode, showOnDashboard',
+      customDataPoints: '++id, seriesId, date, [seriesId+date]',
+      chatConversations: '++id, createdAt',
+      chatMessages: '++id, conversationId, role, createdAt',
+      feedback: '++id, category, createdAt',
     });
   }
 }

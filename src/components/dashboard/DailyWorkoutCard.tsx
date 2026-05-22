@@ -7,15 +7,12 @@ import { AIWorkoutGenerator } from '../ai/AIWorkoutGenerator';
 import { TemplateBrowser } from '../workout/TemplateBrowser';
 import { PPL_COLORS, PPL_LABELS, PPL_MUSCLE_FOCUS, PPL_TYPES } from '../../utils/constants';
 import type { PPLType } from '../../utils/constants';
-import type { OffDaySuggestion } from '../../services/pplScheduler';
 
 interface DailyWorkoutCardProps {
   todayType: PPLType | 'rest';
-  offDaySuggestion?: OffDaySuggestion | null;
-  smartReason?: string | null;
 }
 
-export function DailyWorkoutCard({ todayType, offDaySuggestion, smartReason }: DailyWorkoutCardProps) {
+export function DailyWorkoutCard({ todayType }: DailyWorkoutCardProps) {
   const navigate = useNavigate();
   const [aiOpen, setAiOpen] = useState(false);
   const [templatesOpen, setTemplatesOpen] = useState(false);
@@ -30,12 +27,7 @@ export function DailyWorkoutCard({ todayType, offDaySuggestion, smartReason }: D
   if (todayType === 'rest') {
     return (
       <>
-        <RestDayCard
-          suggestion={offDaySuggestion ?? null}
-          onStartWorkout={(type) => navigate(`/workouts/new?type=${type}`)}
-          onBrowseTemplates={(type) => openTemplates(type)}
-          onShowOptions={() => setShowOptions(true)}
-        />
+        <RestDayCard onShowOptions={() => setShowOptions(true)} />
         <WorkoutTypePickerModal
           open={showOptions}
           onClose={() => setShowOptions(false)}
@@ -89,12 +81,7 @@ export function DailyWorkoutCard({ todayType, offDaySuggestion, smartReason }: D
           <p className="text-sm text-text-secondary">
             {PPL_MUSCLE_FOCUS[todayType]}
           </p>
-          {smartReason && (
-            <p className="text-xs text-text-muted mt-1 mb-3 italic">
-              {smartReason}
-            </p>
-          )}
-          {!smartReason && <div className="mb-4" />}
+          <div className="mb-4" />
           <div className="flex gap-3">
             <Button
               className="flex-1"
@@ -146,17 +133,7 @@ export function DailyWorkoutCard({ todayType, offDaySuggestion, smartReason }: D
   );
 }
 
-function RestDayCard({
-  suggestion,
-  onStartWorkout,
-  onBrowseTemplates,
-  onShowOptions,
-}: {
-  suggestion: OffDaySuggestion | null;
-  onStartWorkout: (type: PPLType) => void;
-  onBrowseTemplates: (type: PPLType) => void;
-  onShowOptions: () => void;
-}) {
+function RestDayCard({ onShowOptions }: { onShowOptions: () => void }) {
   const restColor = PPL_COLORS.rest;
 
   return (
@@ -182,35 +159,12 @@ function RestDayCard({
           </svg>
         </div>
         <h2 className="text-xl font-bold text-text-primary">Rest Day</h2>
-        <p className="text-sm text-text-secondary mb-4">
+        <p className="text-sm text-text-secondary">
           Recovery and regeneration
         </p>
-
-        {suggestion && (
-          <div className="p-3 rounded-xl bg-bg-elevated border border-border">
-            <p className="text-xs text-text-muted mb-1">Want to train anyway?</p>
-            <div className="flex items-center gap-2 mb-2">
-              <div
-                className="w-2.5 h-2.5 rounded-full"
-                style={{ backgroundColor: PPL_COLORS[suggestion.type] }}
-              />
-              <span className="text-sm font-semibold text-text-primary capitalize">
-                {suggestion.type} recommended
-              </span>
-            </div>
-            <p className="text-xs text-text-secondary mb-3">
-              {suggestion.reason}
-            </p>
-            <div className="flex gap-2">
-              <Button size="sm" onClick={() => onStartWorkout(suggestion.type)}>
-                Start {suggestion.type}
-              </Button>
-              <Button size="sm" variant="ghost" onClick={() => onBrowseTemplates(suggestion.type)}>
-                Templates
-              </Button>
-            </div>
-          </div>
-        )}
+        <p className="text-xs text-text-muted mt-2">
+          Tap to train anyway.
+        </p>
       </div>
     </Card>
   );
