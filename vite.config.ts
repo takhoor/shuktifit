@@ -129,6 +129,11 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        // The SPA navigation fallback must never swallow serverless routes.
+        // Without this, a full-page navigation to /api/* (e.g. the Withings
+        // OAuth hand-off) is served index.html from the precache and the
+        // request never reaches the server.
+        navigateFallbackDenylist: [/^\/api\//],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/raw\.githubusercontent\.com\/yuhonas\/free-exercise-db/,

@@ -4,7 +4,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { accessToken, refreshToken, dataType, startDate, endDate } = req.body;
+  const { accessToken, refreshToken, dataType, startDate, endDate, raw } = req.body;
 
   if (!accessToken) {
     return res.status(400).json({ error: 'Missing access token' });
@@ -17,7 +17,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Fetch data with current token first
     let data;
     try {
-      data = await fetchData(dataType, token, startDate, endDate);
+      data = await fetchData(dataType, token, startDate, endDate, raw);
     } catch (err) {
       // If 401, try refreshing the token and retry once
       if (refreshToken && err instanceof Error && err.message.includes('401')) {
@@ -25,7 +25,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (refreshResult) {
           token = refreshResult.access_token;
           newTokens = refreshResult;
-          data = await fetchData(dataType, token, startDate, endDate);
+          data = await fetchData(dataType, token, startDate, endDate, raw);
         } else {
           return res.status(401).json({ error: 'Token expired and refresh failed. Please reconnect Withings.' });
         }
@@ -44,9 +44,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 }
 
-async function fetchData(dataType: string, token: string, startDate?: string, endDate?: string) {
+async function fetchData(dataType: string, token: string, startDate?: string, endDate?: string, raw?: boolean) {
   if (dataType === 'weight' || dataType === 'body') {
-    return fetchMeasurements(token, startDate, endDate);
+    return fetchMeasurements(token, startDate, endDate, raw);
   } else if (dataType === 'activity') {
     return fetchActivity(token, startDate, endDate);
   } else if (dataType === 'sleep') {
@@ -86,7 +86,7 @@ async function tryRefreshToken(refreshToken: string) {
   return null;
 }
 
-async function fetchMeasurements(token: string, startDate?: string, endDate?: string) {
+async function fetchMeasurements(token: string, startDate?: string, endDate?: string, raw?: boolean) {
   const params: Record<string, string> = {
     action: 'getmeas',
     meastypes: '1,6,8,76,77', // weight, fat ratio, fat mass, muscle mass, bone mass
@@ -106,6 +106,10 @@ async function fetchMeasurements(token: string, startDate?: string, endDate?: st
 
   const data = await res.json();
   if (data.status !== 0) throw new Error(`Withings API error: ${data.status}`);
+
+  // Debug passthrough: return the untouched Withings payload so attrib / deviceid /
+  // grpid can be inspected when diagnosing a scale that isn't syncing.
+  if (raw) return data.body;
 
   // Parse measurements
   const measurements: Array<{
