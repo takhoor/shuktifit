@@ -10,6 +10,7 @@ import { today } from '../utils/dateUtils';
 import { estimate1RM } from '../utils/formatUtils';
 import { DEFAULT_REST_SECONDS } from '../utils/constants';
 import type { PPLType } from '../utils/constants';
+import { recordWorkoutCompletion } from './streakService';
 
 export async function createWorkout(
   type: PPLType | 'full-body' | 'custom',
@@ -315,6 +316,9 @@ export async function completeWorkout(
     durationMinutes,
     notes: notes ?? workout.notes,
   });
+
+  // B2 fix: update the workout streak (increment on complete; rest days + a weekly pass forgiven).
+  await recordWorkoutCompletion(workout.date);
 
   // Reset any other in_progress workouts back to planned so they can be started fresh
   const staleWorkouts = await db.workouts
